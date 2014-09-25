@@ -439,3 +439,37 @@ class CustomFieldTestCase(BaseTestCase):
             self.assertIn(self.logger_warn_called(AField),
                           logger.warn.call_args_list)
         self.assertNotIn('status', AModel._meta.dfields)
+
+
+class ProxyModelTestCase(BaseTestCase):
+    def test_it(self):
+        from django.db import models as dj_models
+        from djangostdnet import models
+
+        class AParentDjangoModel(dj_models.Model):
+            name = dj_models.CharField(max_length=10)
+
+            @property
+            def emphasized_name(self):
+                return '** %s **' % self.name
+
+            def hi(self, name):
+                return 'hi %s, I\'m %s' % (name, self.name)
+
+            class Meta:
+                abstract = True
+
+        class AChildDjangoModel(AParentDjangoModel):
+            def bye(self, name):
+                return 'bye %s' % name
+
+        class AModel(models.Model):
+            class Meta:
+                django_model = AChildDjangoModel
+
+        self.create_table_for_model(AChildDjangoModel)
+
+        obj = AModel.objects.new(name='foo')
+        self.assertEqual(obj.emphasized_name, '** foo **')
+        self.assertEqual(obj.hi('bar'), 'hi bar, I\'m foo')
+        self.assertEqual(obj.bye('bar'), 'bye bar')

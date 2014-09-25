@@ -35,6 +35,22 @@ def register_field_mapping(django_field, stdnet_field_or_callable):
 
 
 class ModelMeta(odm.ModelType):
+    @staticmethod
+    def proxy__getattr__(instance, name):
+        django_meta = getattr(instance, '_django_meta', None)
+        attr = getattr(django_meta.model, name, None)
+        if attr is not None:
+            django_model_attr = getattr(models.Model, name, None)
+            if attr == django_model_attr:
+                raise AttributeError("Unsupported attribute of Django Model: %s", name)
+            if isinstance(attr, property):
+                return attr.__get__(instance, instance.__class__)
+            elif callable(attr):
+                return attr.__func__.__get__(instance, instance.__class__)
+            # else:
+            #     return attr
+        raise AttributeError(name)
+
     def __new__(mcs, name, bases, dct):
         meta = dct.get('Meta', None)
         meta_model = getattr(meta, 'django_model', None)
@@ -45,6 +61,8 @@ class ModelMeta(odm.ModelType):
             del meta.django_model
             dct['_django_meta'] = Meta
 
+            # proxy for original methods
+            dct['__getattr__'] = mcs.proxy__getattr__
             dct['_instance'] = None
             # generate odm fields by django orm fields
             for field in meta_model._meta.fields:
