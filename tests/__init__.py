@@ -18,3 +18,4 @@ settings.configure(
 
 from .models import *
 from .session import *
+from .fields import *
