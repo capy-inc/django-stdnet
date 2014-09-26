@@ -183,3 +183,46 @@ class OneToOneFieldTestCase(BaseTestCase):
         parent_obj = AParentModel.objects.new()
         with self.assertRaises(ValueError):
             parent_obj.achildmodel_parent = object()
+
+
+class ImageFieldTestCase(BaseTestCase):
+    def test_it(self):
+        import os
+        import tempfile
+        from PIL import Image
+        from django.core.files import images
+        from django.db import models as dj_models
+        from djangostdnet import models
+
+        class ADjangoModel(dj_models.Model):
+            image = dj_models.ImageField(width_field='width', height_field='height')
+            width = dj_models.IntegerField(null=True)
+            height = dj_models.IntegerField(null=True)
+
+        class AModel(models.Model):
+            class Meta:
+                django_model = ADjangoModel
+                register = False
+
+        self.create_table_for_model(ADjangoModel)
+
+        (fd, filename) = tempfile.mkstemp()
+        image = Image.new('RGB', (10, 20))
+        image.save(os.fdopen(fd, 'wb'), 'gif')
+
+        self.addCleanup(os.remove, filename)
+
+        obj = AModel.objects.new()
+        obj.image = images.ImageFile(open(filename))
+        obj.save()
+
+        self.assertEqual(obj.width, 10)
+        self.assertEqual(obj.height, 20)
+
+        self.addCleanup(os.remove, obj.image.path)
+
+        dj_obj = ADjangoModel.objects.get(pk=obj.id)
+
+        self.assertEqual(dj_obj.image.read(6), 'GIF87a')
+        self.assertEqual(dj_obj.width, 10)
+        self.assertEqual(dj_obj.height, 20)

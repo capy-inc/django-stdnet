@@ -8,7 +8,7 @@ from django.db.models import signals
 from six import with_metaclass
 from stdnet import odm
 from .mapper import Mapper
-from .fields import OneToOneField
+from .fields import OneToOneField, ImageField
 
 
 logger = logging.getLogger(__name__)
@@ -27,6 +27,7 @@ _mapping = {
     models.DateTimeField: odm.DateTimeField,
     models.ForeignKey: odm.ForeignKey,
     models.OneToOneField: OneToOneField,
+    models.ImageField: ImageField
 }
 
 
@@ -38,15 +39,20 @@ class ModelMeta(odm.ModelType):
     @staticmethod
     def proxy__getattr__(instance, name):
         django_meta = getattr(instance, '_django_meta', None)
-        attr = getattr(django_meta.model, name, None)
+        # retrieve from instance dict first for descriptor which may raise AttributeError
+        attr = (django_meta.model.__dict__.get(name)
+                or getattr(django_meta.model, name, None))
         if attr is not None:
-            django_model_attr = getattr(models.Model, name, None)
+            django_model_attr = (models.Model.__dict__.get(name)
+                                 or getattr(models.Model, name, None))
             if attr == django_model_attr:
                 raise AttributeError("Unsupported attribute of Django Model: %s", name)
             if isinstance(attr, property):
                 return attr.__get__(instance, instance.__class__)
-            elif callable(attr):
+            elif callable(getattr(attr, '__func__', None)):
                 return attr.__func__.__get__(instance, instance.__class__)
+            elif callable(getattr(attr, '__get__', None)):
+                return attr.__get__(instance, instance.__class__)
             # else:
             #     return attr
         raise AttributeError(name)
@@ -141,4 +147,4 @@ class DjangoStdnetModel(with_metaclass(ModelMeta, odm.StdModel)):
 
 Model = DjangoStdnetModel
 
-__all__ = ('Model', 'OneToOneField')
+__all__ = ('Model', 'OneToOneField', 'ImageField')

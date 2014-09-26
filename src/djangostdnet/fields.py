@@ -1,3 +1,4 @@
+from django.db.models.fields import files
 from stdnet import odm
 from stdnet.odm import related
 from stdnet.odm.globals import JSPLITTER
@@ -148,5 +149,52 @@ the database field for the ``PrivateKey`` model will have a ``public_key_id`` fi
                 raise errorClass('%s not a valid field for %s' % (fname, meta))
         else:
             return super(OneToOneField, self).get_lookup(name, errorClass)
+
+
+class ImageField(odm.Field):
+    def __init__(self, width_field=None, height_field=None, *args, **kwargs):
+        super(ImageField, self).__init__(*args, **kwargs)
+        self._width_field = width_field
+        self._height_field = height_field
+
+    def register_with_model(self, name, model):
+        super(ImageField, self).register_with_model(name, model)
+        setattr(model, name, files.ImageFileDescriptor(self))
+
+    def update_dimension_fields(self, *args, **kwargs):
+        delegate_func = files.ImageField.update_dimension_fields.__func__.__get__(self, self.__class__)
+        return delegate_func(*args, **kwargs)
+
+    def _get_original_model_field(self):
+        django_meta = getattr(self.model, '_django_meta', None)
+        if django_meta is not None:
+            return django_meta.model._meta.get_field_by_name(self.name)[0]
+
+    @property
+    def width_field(self):
+        if self._width_field is not None:
+            return self._width_field
+
+        field = self._get_original_model_field()
+        if field:
+            return field.width_field
+
+    @width_field.setter
+    def width_field(self, value):
+        self._width_field
+
+    @property
+    def height_field(self):
+        if self._height_field is not None:
+            return self._height_field
+
+        field = self._get_original_model_field()
+        if field:
+            return field.height_field
+
+    @height_field.setter
+    def height_field(self, value):
+        self._height_field
+
 
 __all__ = ['OneToOneField']
