@@ -197,4 +197,4 @@ class ImageField(odm.Field):
         self._height_field
 
 
-__all__ = ['OneToOneField']
+__all__ = ['OneToOneField', 'ImageField']
