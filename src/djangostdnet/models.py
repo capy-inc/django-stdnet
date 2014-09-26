@@ -8,7 +8,7 @@ from django.db.models import signals
 from six import with_metaclass
 from stdnet import odm
 from .mapper import Mapper
-from .fields import OneToOneField, ImageField
+from .fields import OneToOneField, ImageField, IPAddressField
 
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,8 @@ _mapping = {
     models.DateTimeField: odm.DateTimeField,
     models.ForeignKey: odm.ForeignKey,
     models.OneToOneField: OneToOneField,
-    models.ImageField: ImageField
+    models.ImageField: ImageField,
+    models.IPAddressField: IPAddressField
 }
 
 
@@ -147,4 +148,4 @@ class DjangoStdnetModel(with_metaclass(ModelMeta, odm.StdModel)):
 
 Model = DjangoStdnetModel
 
-__all__ = ('Model', 'OneToOneField', 'ImageField')
+__all__ = ('Model', 'OneToOneField', 'ImageField', 'IPAddressField')

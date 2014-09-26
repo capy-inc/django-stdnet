@@ -197,4 +197,8 @@ class ImageField(odm.Field):
         self._height_field
 
 
-__all__ = ['OneToOneField', 'ImageField']
+class IPAddressField(odm.CharField):
+    pass
+
+
+__all__ = ['OneToOneField', 'ImageField', 'IPAddressField']
