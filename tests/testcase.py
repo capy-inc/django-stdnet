@@ -1,5 +1,6 @@
 import json
 from collections import Counter, defaultdict
+from stdnet import backends
 from stdnet.utils import exceptions
 from django.test import TestCase
 
@@ -73,11 +74,12 @@ class BaseTestCase(TestCase):
             def setup_connection(self, address):
                 pass
 
-            def execute_session(self, session_data):
-                for session in session_data:
-                    meta = session.meta
-                    if session.dirty:
-                        for obj in session.dirty:
+            def execute_session(self, session_data_list):
+                for session_data in session_data_list:
+                    meta = session_data.meta
+                    results = []
+                    if session_data.dirty:
+                        for obj in session_data.dirty:
                             if not meta.is_valid(obj):
                                 raise exceptions.FieldValueError(
                                     json.dumps(obj._dbdata['errors']))
@@ -95,9 +97,26 @@ class BaseTestCase(TestCase):
                                 self.gen[obj.__class__] = current + 1
                                 obj.pk().set_value(obj, current)
                             self.db[obj.__class__][pk] = obj
-                    if session.deletes is not None:
-                        for obj in session.deletes:
+                            state = obj.get_state()
+                            results.append(
+                                backends.instance_session_result(
+                                    state.iid,
+                                    True,
+                                    obj.id,
+                                    False,
+                                    5))
+                    if session_data.deletes is not None:
+                        for obj in session_data.deletes:
                             del self.db[obj.__class__][obj.pkvalue()]
+                            state = obj.get_state()
+                            results.append(
+                                backends.instance_session_result(
+                                    state.iid,
+                                    True,
+                                    obj.id,
+                                    True,
+                                    5))
+                    yield backends.session_result(meta, results)
 
         self.fake_backend = FakeBackendDataServer()
         models.mapper = mapper.Mapper(default_backend=self.fake_backend, install_global=True)

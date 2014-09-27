@@ -171,6 +171,53 @@ class ModelSaveTestCase(BaseTestCase):
         with self.assertRaises(AModel.DoesNotExist):
             AModel.objects.get(id=dj_obj_pk)
 
+    def test_delete_from_django_stdnet_model(self):
+        from django.db import models as dj_models
+        from djangostdnet import models
+
+        class ADjangoModel(dj_models.Model):
+            name = dj_models.CharField(max_length=255)
+
+        class AModel(models.Model):
+            class Meta:
+                django_model = ADjangoModel
+                register = False
+
+        self.create_table_for_model(ADjangoModel)
+
+        dj_obj = ADjangoModel(name='amodel')
+        dj_obj.save()
+        dj_obj_pk = dj_obj.pk
+
+        obj = AModel.objects.get(id=dj_obj_pk)
+        obj.delete()
+
+        with self.assertRaises(ADjangoModel.DoesNotExist):
+            ADjangoModel.objects.get(pk=dj_obj_pk)
+
+    def test_delete_from_django_model(self):
+        from django.db import models as dj_models
+        from djangostdnet import models
+
+        class ADjangoModel(dj_models.Model):
+            name = dj_models.CharField(max_length=255)
+
+        class AModel(models.Model):
+            class Meta:
+                django_model = ADjangoModel
+                register = False
+
+        self.create_table_for_model(ADjangoModel)
+
+        dj_obj = ADjangoModel(name='amodel')
+        dj_obj.save()
+        dj_obj_pk = dj_obj.pk
+
+        AModel.objects.get(id=dj_obj_pk)
+        dj_obj.delete()
+
+        with self.assertRaises(AModel.DoesNotExist):
+            AModel.objects.get(id=dj_obj_pk)
 
 class ModelExtendTestCase(BaseTestCase):
     def test_it(self):

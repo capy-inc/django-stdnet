@@ -128,16 +128,20 @@ class ModelMeta(odm.ModelType):
         mapper.register(model, meta_backend, meta_read_backend)
 
         if meta_model:
-            def post_save_handle(instance, **kwargs):
+            def post_save_handle_from_django(instance, **kwargs):
                 manager = mapper[model]
                 manager.session().add_from_django_object(manager, instance)
 
-            def post_delete_handle(instance, **kwargs):
+            def post_delete_handle_from_django(instance, **kwargs):
                 manager = mapper[model]
                 manager.session().delete_from_django_object(manager, instance)
 
-            signals.post_save.connect(post_save_handle, sender=meta_model, weak=False)
-            signals.post_delete.connect(post_delete_handle, sender=meta_model, weak=False)
+            def post_delete_handle_from_stdnet(_ev, _model, instances=[], **kwargs):
+                meta_model.objects.filter(pk__in=instances).delete()
+
+            signals.post_save.connect(post_save_handle_from_django, sender=meta_model, weak=False)
+            signals.post_delete.connect(post_delete_handle_from_django, sender=meta_model, weak=False)
+            mapper.post_delete.bind(post_delete_handle_from_stdnet, sender=model)
 
         return model
 
