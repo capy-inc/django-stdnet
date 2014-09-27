@@ -101,7 +101,7 @@ class ModelSaveTestCase(BaseTestCase):
 
         obj = AModel.objects.new(name='amodel')
 
-        self.assertIn(obj, self.fake_backend.db[AModel].values())
+        self.assertEqual([obj], self.fake_backend.db[AModel].values())
         self.assertEqual(obj.id, obj._instance.id)
         self.assertEqual(obj.name, obj._instance.name)
         self.assertEqual(obj.name, 'amodel')

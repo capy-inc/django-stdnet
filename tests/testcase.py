@@ -1,4 +1,6 @@
+import json
 from collections import Counter, defaultdict
+from stdnet.utils import exceptions
 from django.test import TestCase
 
 
@@ -16,17 +18,28 @@ class BaseTestCase(TestCase):
             def _items(self, slic):
                 return self.result
 
+            def _cleanup(self, instances):
+                result = []
+                meta = self.model._meta
+                for obj in instances:
+                    obj.dbdata[meta.pkname()] = obj.pkvalue()
+                    del obj.dbdata['state']
+
+                    for field in meta.fields:
+                        setattr(obj, field.attname, field.to_python(getattr(obj, field.attname)))
+
+                    result.append(obj)
+                return result
+
             def _execute_query(self):
                 # simple support looking up by value
                 if (len(self.queryelem) == 1
                     and list(self.queryelem)[0].lookup == 'value'):
                     name = self.queryelem.name
                     value = list(self.queryelem)[0].value
-                    self.result = [obj for obj in self.backend.db[self.model].values()
-                                   if getattr(obj, name) == value]
-                    for obj in self.result:
-                        obj.dbdata[self.model._meta.pkname()] = obj.pkvalue()
-                        del obj.dbdata['state']
+                    result = [obj for obj in self.backend.db[self.model].values()
+                              if getattr(obj, name) == value]
+                    self.result = self._cleanup(result)
                     yield len(self.result)
                 # and relation for OneToOneField test
                 if (len(self.queryelem) == 1
@@ -44,11 +57,9 @@ class BaseTestCase(TestCase):
                     rel_result = [obj.pkvalue() for obj in self.backend.db[field.relmodel].values()
                                   if getattr(obj, rel_name) == rel_value]
                     # filter by the ids
-                    self.result = [obj for obj in self.backend.db[self.model].values()
-                                   if getattr(obj, name) in rel_result]
-                    for obj in self.result:
-                        obj.dbdata[self.model._meta.pkname()] = obj.pkvalue()
-                        del obj.dbdata['state']
+                    result = [obj for obj in self.backend.db[self.model].values()
+                              if getattr(obj, name) in rel_result]
+                    self.result = self._cleanup(result)
                     yield len(self.result)
 
         class FakeBackendDataServer(backends.BackendDataServer):
@@ -64,14 +75,20 @@ class BaseTestCase(TestCase):
 
             def execute_session(self, session_data):
                 for session in session_data:
+                    meta = session.meta
                     if session.dirty:
                         for obj in session.dirty:
+                            if not meta.is_valid(obj):
+                                raise exceptions.FieldValueError(
+                                    json.dumps(obj._dbdata['errors']))
                             for field in obj._meta.fields:
                                 if isinstance(field, (odm.ForeignKey, fields.OneToOneField)):
                                     # reset field relation
-                                    field_value = getattr(obj, '%s_id' % field.name)
+                                    field_value = getattr(obj, field.attname)
                                     setattr(obj, field.name, None)
-                                    setattr(obj, '%s_id' % field.name, field_value)
+                                    setattr(obj, field.attname, field_value)
+                                if field.name in obj._dbdata['cleaned_data']:
+                                    setattr(obj, field.name, obj._dbdata['cleaned_data'][field.name])
                             pk = obj.pkvalue()
                             if pk is None:
                                 pk = current = self.gen[obj.__class__]

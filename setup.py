@@ -13,4 +13,5 @@ setup(
         '': 'src',
     },
     install_requires=['python-stdnet'],
+    tests_require=['mock', 'freezegun'],
 )
