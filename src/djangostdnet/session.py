@@ -13,12 +13,16 @@ class Session(session.Session):
     def add(self, instance, modified=True, **params):
         from .models import Model
 
+        created = False
         if (modified
             and isinstance(instance, Model)
             and hasattr(instance, '_django_meta')
             and hasattr(instance._django_meta, 'model')):
-            self._ensure_django_instance(instance)
-        return super(Session, self).add(instance, modified, **params)
+            created = self._ensure_django_instance(instance)
+        if created:
+            return self.query(self.model(instance)).get(id=instance.id)
+        else:
+            return super(Session, self).add(instance, modified, **params)
 
     def _ensure_django_instance(self, instance):
         django_model = instance._django_meta.model
@@ -52,11 +56,15 @@ class Session(session.Session):
                 setattr(instance._instance, field_name, field_value)
 
         if modified:
+            # when creation, the instance will be created implicitly by add_from_django_object
+            # via post_commit signal of the django instance
             instance._instance.save()
 
         # assign django model's pk to stdnet model
         if creation:
             instance._meta.pk.set_value(instance, instance._instance.pk)
+
+        return creation
 
     def add_from_django_object(self, manager, django_obj):
         model = manager.model
