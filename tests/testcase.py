@@ -1,6 +1,5 @@
 import json
 from collections import Counter, defaultdict
-from stdnet import backends
 from stdnet.utils import exceptions
 from django.test import TestCase
 
@@ -28,6 +27,9 @@ class BaseTestCase(TestCase):
 
                     for field in meta.fields:
                         setattr(obj, field.attname, field.to_python(getattr(obj, field.attname)))
+
+                        if isinstance(field, fields.ImageField):
+                            field.get_value(obj).open()
 
                     result.append(obj)
                 return result

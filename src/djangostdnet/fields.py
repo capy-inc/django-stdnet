@@ -153,18 +153,23 @@ the database field for the ``PrivateKey`` model will have a ``public_key_id`` fi
 
 
 class ImageField(odm.Field):
-    def __init__(self, width_field=None, height_field=None, *args, **kwargs):
+    attr_class = files.ImageFieldFile
+
+    def __init__(self, width_field=None, height_field=None, upload_to='', storage=None, *args, **kwargs):
         super(ImageField, self).__init__(*args, **kwargs)
+
+        # FileField
+        self.storage = storage or files.default_storage
+        self.upload_to = upload_to
+        if callable(upload_to):
+            self.generate_filename = upload_to
+
         self._width_field = width_field
         self._height_field = height_field
 
     def register_with_model(self, name, model):
         super(ImageField, self).register_with_model(name, model)
         setattr(model, name, files.ImageFileDescriptor(self))
-
-    def update_dimension_fields(self, *args, **kwargs):
-        delegate_func = files.ImageField.update_dimension_fields.__func__.__get__(self, self.__class__)
-        return delegate_func(*args, **kwargs)
 
     def _get_original_model_field(self):
         django_meta = getattr(self.model, '_django_meta', None)
@@ -196,6 +201,30 @@ class ImageField(odm.Field):
     @height_field.setter
     def height_field(self, value):
         self._height_field
+
+    def __getattr__(self, item):
+        delegate_func = None
+        meth = getattr(files.ImageField, item, None)
+        if meth:
+            if getattr(meth, '__func__', None):
+                delegate_func = meth.__func__.__get__(self, self.__class__)
+            elif callable(meth):
+                delegate_func = meth.__get__(self, self.__class__)
+        if delegate_func:
+            return delegate_func
+
+    def set_get_value(self, instance, value):
+        # simulate pre_save of django's ImageField
+        if value.name and not value._committed:
+            value.save(value.name, value, save=False)
+
+        return value.name
+
+    def to_python(self, value, backend=None):
+        if isinstance(value, basestring):
+            return files.ImageFile(self.storage.open(value))
+        else:
+            return value
 
 
 class IPAddressField(odm.SymbolField):

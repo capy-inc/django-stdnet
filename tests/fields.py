@@ -186,7 +186,7 @@ class OneToOneFieldTestCase(BaseTestCase):
 
 
 class ImageFieldTestCase(BaseTestCase):
-    def test_it(self):
+    def test_with_django(self):
         import os
         import tempfile
         from PIL import Image
@@ -212,9 +212,7 @@ class ImageFieldTestCase(BaseTestCase):
 
         self.addCleanup(os.remove, filename)
 
-        obj = AModel.objects.new()
-        obj.image = images.ImageFile(open(filename))
-        obj.save()
+        obj = AModel.objects.new(image=images.ImageFile(open(filename)))
 
         self.assertEqual(obj.width, 10)
         self.assertEqual(obj.height, 20)
@@ -223,6 +221,44 @@ class ImageFieldTestCase(BaseTestCase):
 
         dj_obj = ADjangoModel.objects.get(pk=obj.id)
 
+        dj_obj.image.open()
         self.assertEqual(dj_obj.image.read(6), 'GIF87a')
         self.assertEqual(dj_obj.width, 10)
         self.assertEqual(dj_obj.height, 20)
+
+    def test_without_django(self):
+        import os
+        import tempfile
+        from PIL import Image
+        from django.core.files import images
+        from stdnet import odm
+        from djangostdnet import models
+
+        class AModel(models.Model):
+            image = models.ImageField(width_field='width', height_field='height', upload_to='image_field_test',
+                                      required=False)
+            width = odm.IntegerField(required=False)
+            height = odm.IntegerField(required=False)
+
+            class Meta:
+                register = False
+
+        (fd, filename) = tempfile.mkstemp()
+        image = Image.new('RGB', (10, 20))
+        image.save(os.fdopen(fd, 'wb'), 'gif')
+
+        self.addCleanup(os.remove, filename)
+
+        obj = AModel.objects.new(image=images.ImageFile(open(filename), name='test.gif'))
+        self.addCleanup(os.remove, obj.image.path)
+
+        self.assertEqual(obj.width, 10)
+        self.assertEqual(obj.height, 20)
+        self.assertEqual(obj.image.name, 'image_field_test/test.gif')
+
+        obj = AModel.objects.get(id=obj.id)
+
+        obj.image.open()
+        self.assertEqual(obj.image.read(6), 'GIF87a')
+        self.assertEqual(obj.width, 10)
+        self.assertEqual(obj.height, 20)

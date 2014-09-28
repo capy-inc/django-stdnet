@@ -13,7 +13,8 @@ settings.configure(
         'default': {
             'BACKEND': None
         }
-    }
+    },
+    MEDIA_ROOT='/tmp'
 )
 
 from .models import *
