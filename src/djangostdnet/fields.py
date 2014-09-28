@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db.models.fields import files
 from stdnet import odm
 from stdnet.odm import related
@@ -201,4 +202,10 @@ class IPAddressField(odm.SymbolField):
     pass
 
 
-__all__ = ['OneToOneField', 'ImageField', 'IPAddressField']
+class DecimalField(odm.IntegerField):
+    type = 'decimal'
+    internal_type = 'numeric'
+    python_type = Decimal
+
+
+__all__ = ['OneToOneField', 'ImageField', 'IPAddressField', 'DecimalField']
