@@ -125,6 +125,7 @@ class ModelMeta(odm.ModelType):
                 meta_read_backend = value
 
         model = odm.ModelType.__new__(mcs, name, bases, dct)
+        model._meta.object_name = name
         mapper.register(model, meta_backend, meta_read_backend)
 
         if meta_model:
