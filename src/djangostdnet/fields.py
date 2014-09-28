@@ -237,4 +237,11 @@ class DecimalField(odm.IntegerField):
     python_type = Decimal
 
 
-__all__ = ['OneToOneField', 'ImageField', 'IPAddressField', 'DecimalField']
+class DateTimeField(odm.DateTimeField):
+    def __init__(self, auto_now=False, auto_now_add=False, *args, **kwargs):
+        super(DateTimeField, self).__init__(*args, **kwargs)
+        self.auto_now = auto_now
+        self.auto_now_add = auto_now_add
+
+
+__all__ = ['OneToOneField', 'ImageField', 'IPAddressField', 'DecimalField', 'DateTimeField']

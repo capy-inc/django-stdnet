@@ -13,6 +13,9 @@ class Session(session.Session):
     def add(self, instance, modified=True, **params):
         from .models import Model
 
+        if modified:
+            self._check_auto_now_and_auto_now_add(instance)
+
         created = False
         if (modified
             and isinstance(instance, Model)
@@ -23,6 +26,15 @@ class Session(session.Session):
             return self.query(self.model(instance)).get(id=instance.id)
         else:
             return super(Session, self).add(instance, modified, **params)
+
+    def _check_auto_now_and_auto_now_add(self, instance):
+        now = datetime.now()
+        for field in instance._meta.fields:
+            if isinstance(field, fields_mod.DateTimeField):
+                if field.get_value(instance) is None and field.auto_now_add:
+                    field.set_value(instance, now)
+                if field.auto_now:
+                    field.set_value(instance, now)
 
     def _ensure_django_instance(self, instance):
         django_model = instance._django_meta.model
