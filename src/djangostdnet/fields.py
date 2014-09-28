@@ -197,7 +197,7 @@ class ImageField(odm.Field):
         self._height_field
 
 
-class IPAddressField(odm.CharField):
+class IPAddressField(odm.SymbolField):
     pass
 
 
