@@ -336,3 +336,41 @@ class ProxyModelTestCase(BaseTestCase):
         self.assertEqual(obj.emphasized_name, '** foo **')
         self.assertEqual(obj.hi('bar'), 'hi bar, I\'m foo')
         self.assertEqual(obj.bye('bar'), 'bye bar')
+
+
+class AnotherTypePrimaryKeyModelTestCase(BaseTestCase):
+    def test_from_django_model(self):
+        from django.db import models as dj_models
+        from djangostdnet import models
+
+        class ADjangoModel(dj_models.Model):
+            name = dj_models.CharField(max_length=10, primary_key=True)
+
+        class AModel(models.Model):
+            class Meta:
+                django_model = ADjangoModel
+                register = False
+
+        self.create_table_for_model(ADjangoModel)
+
+        dj_obj = ADjangoModel.objects.create(name='foo')
+        obj = AModel.objects.get(name=dj_obj.name)
+        self.assertEqual(obj.name, 'foo')
+
+    def test_from_stdnet_model(self):
+        from django.db import models as dj_models
+        from djangostdnet import models
+
+        class ADjangoModel(dj_models.Model):
+            name = dj_models.CharField(max_length=10, primary_key=True)
+
+        class AModel(models.Model):
+            class Meta:
+                django_model = ADjangoModel
+                register = False
+
+        self.create_table_for_model(ADjangoModel)
+
+        obj = AModel.objects.new(name='foo')
+        dj_obj = ADjangoModel.objects.get(name=obj.name)
+        self.assertEqual(dj_obj.name, 'foo')

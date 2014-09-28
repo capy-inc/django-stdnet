@@ -102,7 +102,7 @@ class BaseTestCase(TestCase):
                                 backends.instance_session_result(
                                     state.iid,
                                     True,
-                                    obj.id,
+                                    obj.pkvalue(),
                                     False,
                                     5))
                     if session_data.deletes is not None:

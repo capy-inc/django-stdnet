@@ -1,1 +1,2 @@
 -e git+https://github.com/lsbardel/python-stdnet.git@d362bff9f8cf6260d61d19780ba7e7b7b1bad0fd#egg=python_stdnet
+six==1.7.3

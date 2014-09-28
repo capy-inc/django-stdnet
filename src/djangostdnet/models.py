@@ -147,7 +147,8 @@ class ModelMeta(odm.ModelType):
 
 
 class DjangoStdnetModel(with_metaclass(ModelMeta, odm.StdModel)):
-    pass
+    class Meta:
+        abstract = True
 
 
 Model = DjangoStdnetModel
