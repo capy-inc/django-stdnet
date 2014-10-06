@@ -219,6 +219,7 @@ class ModelSaveTestCase(BaseTestCase):
         with self.assertRaises(AModel.DoesNotExist):
             AModel.objects.get(id=dj_obj_pk)
 
+
 class ModelExtendTestCase(BaseTestCase):
     def test_it(self):
         from django.db import models as dj_models
@@ -245,7 +246,11 @@ class ModelExtendTestCase(BaseTestCase):
         self.create_table_for_model(ADjangoModel)
 
         obj = AModel.objects.new(name='amodel', status=3)
+        obj = AModel.objects.get(id=obj.id)
+        dj_obj = ADjangoModel.objects.get(pk=obj.id)
 
+        self.assertEqual(obj.name, dj_obj.name)
+        self.assertFalse(hasattr(dj_obj, 'status'))
         self.assertIn(obj, self.fake_backend.db[AModel].values())
         self.assertEqual(obj.name, 'amodel')
         self.assertEqual(obj.status, 3)
