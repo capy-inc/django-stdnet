@@ -184,6 +184,146 @@ class OneToOneFieldTestCase(BaseTestCase):
         with self.assertRaises(ValueError):
             parent_obj.achildmodel_parent = object()
 
+    def test_model_deletion_from_stdnet_child(self):
+        from django.db import models as dj_models
+        from djangostdnet import models
+
+        class ADjangoParentModel(dj_models.Model):
+            name = dj_models.CharField(max_length=255)
+
+        class ADjangoChildModel(dj_models.Model):
+            parent = dj_models.OneToOneField(ADjangoParentModel)
+
+        class AParentModel(models.Model):
+            class Meta:
+                django_model = ADjangoParentModel
+                register = False
+
+        class AChildModel(models.Model):
+            class Meta:
+                django_model = ADjangoChildModel
+                register = False
+
+        self.create_table_for_model(ADjangoParentModel)
+        self.create_table_for_model(ADjangoChildModel)
+
+        parent_obj = AParentModel.objects.new(name='parent')
+        child_obj = AChildModel.objects.new(parent=parent_obj)
+
+        child_obj.delete()
+        parent_obj = AParentModel.objects.get(id=parent_obj.id)
+        with self.assertRaises(AChildModel.DoesNotExist):
+            _ = parent_obj.achildmodel_parent
+
+        self.assertEqual(len(ADjangoParentModel.objects.all()), 1)
+        self.assertEqual(len(ADjangoChildModel.objects.all()), 0)
+        self.assertEqual(len(AParentModel.objects.all()), 1)
+        self.assertEqual(len(AChildModel.objects.all()), 0)
+
+    def test_model_deletion_from_stdnet_parent(self):
+        from django.db import models as dj_models
+        from djangostdnet import models
+
+        class ADjangoParentModel(dj_models.Model):
+            name = dj_models.CharField(max_length=255)
+
+        class ADjangoChildModel(dj_models.Model):
+            parent = dj_models.OneToOneField(ADjangoParentModel)
+
+        class AParentModel(models.Model):
+            class Meta:
+                django_model = ADjangoParentModel
+                register = False
+
+        class AChildModel(models.Model):
+            class Meta:
+                django_model = ADjangoChildModel
+                register = False
+
+        self.create_table_for_model(ADjangoParentModel)
+        self.create_table_for_model(ADjangoChildModel)
+
+        parent_obj = AParentModel.objects.new(name='parent')
+        _ = AChildModel.objects.new(parent=parent_obj)
+
+        # cascading deletion
+        parent_obj.delete()
+
+        self.assertEqual(len(ADjangoParentModel.objects.all()), 0)
+        self.assertEqual(len(ADjangoChildModel.objects.all()), 0)
+        self.assertEqual(len(AParentModel.objects.all()), 0)
+        self.assertEqual(len(AChildModel.objects.all()), 0)
+
+    def test_model_deletion_from_django_child(self):
+        from django.db import models as dj_models
+        from djangostdnet import models
+
+        class ADjangoParentModel(dj_models.Model):
+            name = dj_models.CharField(max_length=255)
+
+        class ADjangoChildModel(dj_models.Model):
+            parent = dj_models.OneToOneField(ADjangoParentModel)
+
+        class AParentModel(models.Model):
+            class Meta:
+                django_model = ADjangoParentModel
+                register = False
+
+        class AChildModel(models.Model):
+            class Meta:
+                django_model = ADjangoChildModel
+                register = False
+
+        self.create_table_for_model(ADjangoParentModel)
+        self.create_table_for_model(ADjangoChildModel)
+
+        parent_dj_obj = ADjangoParentModel.objects.create(name='parent')
+        child_dj_obj = ADjangoChildModel.objects.create(parent=parent_dj_obj)
+
+        child_dj_obj.delete()
+        parent_dj_obj = ADjangoParentModel.objects.get(pk=parent_dj_obj.pk)
+        with self.assertRaises(ADjangoChildModel.DoesNotExist):
+            _ = parent_dj_obj.adjangochildmodel
+
+        self.assertEqual(len(ADjangoParentModel.objects.all()), 1)
+        self.assertEqual(len(ADjangoChildModel.objects.all()), 0)
+        self.assertEqual(len(AParentModel.objects.all()), 1)
+        self.assertEqual(len(AChildModel.objects.all()), 0)
+
+    def test_model_deletion_from_django_parent(self):
+        from django.db import models as dj_models
+        from djangostdnet import models
+
+        class ADjangoParentModel(dj_models.Model):
+            name = dj_models.CharField(max_length=255)
+
+        class ADjangoChildModel(dj_models.Model):
+            parent = dj_models.OneToOneField(ADjangoParentModel)
+
+        class AParentModel(models.Model):
+            class Meta:
+                django_model = ADjangoParentModel
+                register = False
+
+        class AChildModel(models.Model):
+            class Meta:
+                django_model = ADjangoChildModel
+                register = False
+
+        self.create_table_for_model(ADjangoParentModel)
+        self.create_table_for_model(ADjangoChildModel)
+
+        parent_dj_obj = ADjangoParentModel.objects.create(name='parent')
+        _ = ADjangoChildModel.objects.create(parent=parent_dj_obj)
+
+        # cascading deletion
+        parent_dj_obj.delete()
+
+        self.assertEqual(len(ADjangoParentModel.objects.all()), 0)
+        self.assertEqual(len(ADjangoChildModel.objects.all()), 0)
+        self.assertEqual(len(AParentModel.objects.all()), 0)
+        self.assertEqual(len(AChildModel.objects.all()), 0)
+
 
 class ImageFieldTestCase(BaseTestCase):
     def test_with_django(self):
@@ -226,6 +366,8 @@ class ImageFieldTestCase(BaseTestCase):
         self.assertEqual(dj_obj.width, 10)
         self.assertEqual(dj_obj.height, 20)
 
+        dj_obj.delete()
+
     def test_without_django(self):
         import os
         import tempfile
@@ -263,6 +405,8 @@ class ImageFieldTestCase(BaseTestCase):
         self.assertEqual(obj.width, 10)
         self.assertEqual(obj.height, 20)
 
+        obj.delete()
+
 
 class DateTimeFieldTestCase(BaseTestCase):
     def test_auto_now(self):
@@ -298,3 +442,79 @@ class DateTimeFieldTestCase(BaseTestCase):
         obj.save()
         obj = AModel.objects.get(id=obj.id)
         self.assertTrue(obj.created < obj.updated)
+
+
+class QuerySetDeletionTestCase(BaseTestCase):
+    """
+    Checking for relation with unique
+
+    This is because of https://github.com/lsbardel/python-stdnet/pull/82
+    """
+    def test_it(self):
+        from djangostdnet import models
+        from stdnet import odm
+
+        class ParentModel(odm.StdModel):
+            name = odm.SymbolField()
+
+            class Meta:
+                register = False
+
+        class ChildModel(odm.StdModel):
+            parent = odm.ForeignKey(ParentModel, unique=True)
+
+            class Meta:
+                register = False
+
+        models = odm.Router(models.mapper._default_backend)
+        models.register(ParentModel)
+        models.register(ChildModel)
+
+        parent_obj1 = models[ParentModel].new(name='parent1')
+        parent_obj2 = models[ParentModel].new(name='parent2')
+        parent_obj3 = models[ParentModel].new(name='parent3')
+        child_obj1 = models[ChildModel].new(parent=parent_obj1)
+        child_obj2 = models[ChildModel].new(parent=parent_obj2)
+        child_obj3 = models[ChildModel].new(parent=parent_obj3)
+
+        self.assertEqual(models[ParentModel].query().all(), [parent_obj1, parent_obj2, parent_obj3])
+        self.assertEqual(models[ChildModel].query().all(), [child_obj1, child_obj2, child_obj3])
+
+        self.assertEqual(
+            models[ChildModel].query().filter(
+                parent=models[ParentModel].query().filter(name='parent2')).all(),
+            [child_obj2])
+        self.assertEqual(
+            models[ChildModel].query().filter(
+                parent=models[ParentModel].query().filter(name=('parent1', 'parent3'))).all(),
+            [child_obj1, child_obj3])
+
+        # This is the checking
+        models[ChildModel].query().filter(
+            parent=models[ParentModel].query().filter(name='parent2')).delete()
+
+        self.assertEqual(models[ParentModel].query().all(), [parent_obj1, parent_obj2, parent_obj3])
+        self.assertEqual(models[ChildModel].query().all(), [child_obj1, child_obj3])
+
+        self.assertEqual(parent_obj1.childmodel_parent_set.all(), [child_obj1])
+        self.assertEqual(parent_obj2.childmodel_parent_set.all(), [])
+        self.assertEqual(parent_obj3.childmodel_parent_set.all(), [child_obj3])
+
+        # After that, another must still work
+        child_obj3.parent = parent_obj2
+        child_obj3.save()
+
+        self.assertEqual(models[ParentModel].query().all(), [parent_obj1, parent_obj2, parent_obj3])
+        self.assertEqual(models[ChildModel].query().all(), [child_obj1, child_obj3])
+
+        self.assertEqual(parent_obj1.childmodel_parent_set.all(), [child_obj1])
+        self.assertEqual(parent_obj2.childmodel_parent_set.all(), [child_obj3])
+        self.assertEqual(parent_obj3.childmodel_parent_set.all(), [])
+
+        parent_obj2.delete()
+
+        self.assertEqual(models[ParentModel].query().all(), [parent_obj1, parent_obj3])
+        self.assertEqual(models[ChildModel].query().all(), [child_obj1])
+
+        self.assertEqual(parent_obj1.childmodel_parent_set.all(), [child_obj1])
+        self.assertEqual(parent_obj3.childmodel_parent_set.all(), [])

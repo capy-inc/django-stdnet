@@ -6,11 +6,23 @@ from stdnet.odm.globals import JSPLITTER
 
 
 class LazyOneToOneField(related.LazyProxy):
+    @property
+    def model(self):
+        return self.field.model
+
     def load(self, instance, session=None, backend=None):
-        if session is None:
-            session = instance._meta.model.session()
-        qs = session.query(self.field.model)
-        return qs.get(**{self.field.name: instance})
+        cache_name = self.field.get_cache_name()
+        try:
+            cache_val = getattr(instance, cache_name)
+            value = cache_val
+        except AttributeError:
+            if session is None:
+                session = instance._meta.model.session()
+            qs = session.query(self.field.model)
+            value = qs.get(**{self.field.name: instance})
+        if session:
+            value.session = session
+        return value
 
     def __set__(self, instance, value):
         field = self.field
@@ -25,6 +37,12 @@ class LazyOneToOneField(related.LazyProxy):
         cache_name = self.field.get_cache_name()
         setattr(value, self.field.attname, instance.pkvalue())
         setattr(value, cache_name, instance)
+        setattr(instance, cache_name, value)
+
+    def query_from_query(self, query, params=None):
+        if params is None:
+            params = query
+        return query.session.query(self.model, fargs={self.field.name: params})
 
 
 class OneToOneField(odm.Field):
@@ -86,10 +104,10 @@ the database field for the ``PrivateKey`` model will have a ``public_key_id`` fi
                                                         meta, self))
 
     def _register_with_related_model(self):
-        proxy = self.proxy_class_reverse(self)
-        setattr(self.relmodel, self.related_name, proxy)
-        self.relmodel._meta.related[self.related_name] = proxy
-        self.relmodel_proxy = proxy
+        manager = self.proxy_class_reverse(self)
+        setattr(self.relmodel, self.related_name, manager)
+        self.relmodel._meta.related[self.related_name] = manager
+        self.relmodel_manager = manager
 
     def get_attname(self):
         return '%s_id' % self.name

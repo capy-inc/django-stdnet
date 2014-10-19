@@ -129,6 +129,7 @@ class ModelMeta(odm.ModelType):
         mapper.register(model, meta_backend, meta_read_backend)
 
         if meta_model:
+            # TODO move pre_save handler from stdnet defined in session here.
             def post_save_handle_from_django(instance, **kwargs):
                 manager = mapper[model]
                 manager.session().add_from_django_object(manager, instance)

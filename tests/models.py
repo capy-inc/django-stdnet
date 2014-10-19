@@ -13,8 +13,8 @@ class ConnectionSettingTestCase(BaseTestCase):
             class Meta:
                 register = False
 
-        self.assertEqual(AModel.objects.backend, models.mapper._default_backend)
-        self.assertEqual(AModel.objects.read_backend, models.mapper._default_backend)
+        self.assertEqual(AModel.objects.backend.connection_string, models.mapper._default_backend)
+        self.assertEqual(AModel.objects.read_backend.connection_string, models.mapper._default_backend)
 
     def test_meta_connection_string(self):
         from stdnet import odm
@@ -82,7 +82,7 @@ class ModelSaveTestCase(BaseTestCase):
 
         obj = AModel.objects.new(name='amodel')
 
-        self.assertIn(obj, self.fake_backend.db[AModel].values())
+        self.assertIn(obj, AModel.objects.all())
         self.assertEqual(obj.name, 'amodel')
 
     def test_save_new_instance_from_django_stdnet_model(self):
@@ -101,7 +101,7 @@ class ModelSaveTestCase(BaseTestCase):
 
         obj = AModel.objects.new(name='amodel')
 
-        self.assertEqual([obj], self.fake_backend.db[AModel].values())
+        self.assertEqual([obj], AModel.objects.all())
         self.assertEqual(obj.id, obj._instance.id)
         self.assertEqual(obj.name, obj._instance.name)
         self.assertEqual(obj.name, 'amodel')
@@ -134,7 +134,7 @@ class ModelSaveTestCase(BaseTestCase):
         # don't affect the django object
         obj = AModel.objects.new(id=dj_obj_pk, name=dj_obj.name)
 
-        self.assertIn(obj, self.fake_backend.db[AModel].values())
+        self.assertIn(obj, AModel.objects.all())
         self.assertEqual(obj._instance.id, dj_obj_pk)
         self.assertEqual(obj.id, obj._instance.id)
         self.assertEqual(obj.name, obj._instance.name)
@@ -251,7 +251,7 @@ class ModelExtendTestCase(BaseTestCase):
 
         self.assertEqual(obj.name, dj_obj.name)
         self.assertFalse(hasattr(dj_obj, 'status'))
-        self.assertIn(obj, self.fake_backend.db[AModel].values())
+        self.assertIn(obj, AModel.objects.all())
         self.assertEqual(obj.name, 'amodel')
         self.assertEqual(obj.status, 3)
         self.assertEqual(obj.next_status, 4)
