@@ -94,7 +94,7 @@ the database field for the ``PrivateKey`` model will have a ``public_key_id`` fi
         self.relmodel = relmodel
         meta = self.relmodel._meta
         if not self.related_name:
-            self.related_name = '_'.join([self.model._meta.name, self.name])
+            self.related_name = self.model.__name__.lower()
         if (self.related_name not in meta.related and
             self.related_name not in meta.dfields):
             self._register_with_related_model()
