@@ -39,14 +39,13 @@ class Session(session.Session):
     def _ensure_django_instance(self, instance):
         django_model = instance._django_meta.model
         modified = False
-        if instance._instance is None:
-            try:
-                instance._instance = django_model.objects.get(pk=instance.pkvalue())
-            except django_model.DoesNotExist:
-                modified = True
-                instance._instance = django_model()
-                instance._instance.pk = instance.pkvalue()
-        if instance._instance.pk is None:
+        try:
+            django_instance = django_model.objects.get(pk=instance.pkvalue())
+        except django_model.DoesNotExist:
+            modified = True
+            django_instance = django_model()
+            django_instance.pk = instance.pkvalue()
+        if django_instance.pk is None:
             creation = True
             modified = True
             # primary key will be obtained from django model instance
@@ -63,18 +62,18 @@ class Session(session.Session):
             else:
                 field_name = field.name
                 field_value = field.get_value(instance)
-            if getattr(instance._instance, field_name, UNDEFINED) != field_value:
+            if getattr(django_instance, field_name, UNDEFINED) != field_value:
                 modified = True
-                setattr(instance._instance, field_name, field_value)
+                setattr(django_instance, field_name, field_value)
 
         if modified:
             # when creation, the instance will be created implicitly by add_from_django_object
             # via post_commit signal of the django instance
-            instance._instance.save()
+            django_instance.save()
 
         # assign django model's pk to stdnet model
         if creation:
-            instance._meta.pk.set_value(instance, instance._instance.pk)
+            instance._meta.pk.set_value(instance, django_instance.pk)
 
         return creation
 
@@ -92,8 +91,6 @@ class Session(session.Session):
 
         fields = [field for field in model._meta.fields
                   if field != pk]
-
-        instance._instance = django_obj
 
         for field in fields:
             if isinstance(field, (odm.ForeignKey, fields_mod.OneToOneField)):

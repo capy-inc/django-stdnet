@@ -80,10 +80,13 @@ class ModelSaveTestCase(BaseTestCase):
             class Meta:
                 register = False
 
-        obj = AModel.objects.new(name='amodel')
+        obj1 = AModel.objects.new(name='amodel1')
+        obj2 = AModel.objects.new(name='amodel2')
 
-        self.assertIn(obj, AModel.objects.all())
-        self.assertEqual(obj.name, 'amodel')
+        self.assertEqual([obj1.pkvalue(), obj2.pkvalue()],
+                         [obj.pkvalue() for obj in AModel.objects.all()])
+        self.assertEqual(obj1.name, 'amodel1')
+        self.assertEqual(obj2.name, 'amodel2')
 
     def test_save_new_instance_from_django_stdnet_model(self):
         from django.db import models as dj_models
@@ -99,12 +102,17 @@ class ModelSaveTestCase(BaseTestCase):
 
         self.create_table_for_model(ADjangoModel)
 
-        obj = AModel.objects.new(name='amodel')
+        obj1 = AModel.objects.new(name='amodel1')
+        obj2 = AModel.objects.new(name='amodel2')
+        dj_obj1 = ADjangoModel.objects.get(pk=obj1.id)
+        dj_obj2 = ADjangoModel.objects.get(pk=obj2.id)
 
-        self.assertEqual([obj], AModel.objects.all())
-        self.assertEqual(obj.id, obj._instance.id)
-        self.assertEqual(obj.name, obj._instance.name)
-        self.assertEqual(obj.name, 'amodel')
+        self.assertEqual([dj_obj1.pk, dj_obj2.pk],
+                         [dj_obj.pk for dj_obj in ADjangoModel.objects.all()])
+        self.assertEqual([obj1.pkvalue(), obj2.pkvalue()],
+                         [obj.pkvalue() for obj in AModel.objects.all()])
+        self.assertEqual(dj_obj1.name, 'amodel1')
+        self.assertEqual(dj_obj2.name, 'amodel2')
 
     def test_save_new_instance_from_django_model(self):
         from django.db import models as dj_models
@@ -120,25 +128,24 @@ class ModelSaveTestCase(BaseTestCase):
 
         self.create_table_for_model(ADjangoModel)
 
-        dj_obj = ADjangoModel(name='amodel')
-        dj_obj.save()
-        self.assertIsNotNone(dj_obj.pk)
-        dj_obj_pk = dj_obj.pk
+        dj_obj1 = ADjangoModel(name='amodel')
+        dj_obj1.save()
+        self.assertIsNotNone(dj_obj1.pk)
+        dj_obj_pk = dj_obj1.pk
 
-        # In this case, there is no model changes. So, Model.save() should not be called.
+        # In this case, there is no the object changes. So, Model.save() should not be called.
         def poison_save(self):
             raise AssertionError("die by poison")
 
-        dj_obj.save = poison_save.__get__(dj_obj, ADjangoModel)
+        dj_obj1.save = poison_save.__get__(dj_obj1, ADjangoModel)
 
         # don't affect the django object
-        obj = AModel.objects.new(id=dj_obj_pk, name=dj_obj.name)
+        obj1 = AModel.objects.new(id=dj_obj_pk, name=dj_obj1.name)
 
-        self.assertIn(obj, AModel.objects.all())
-        self.assertEqual(obj._instance.id, dj_obj_pk)
-        self.assertEqual(obj.id, obj._instance.id)
-        self.assertEqual(obj.name, obj._instance.name)
-        self.assertEqual(obj.name, 'amodel')
+        self.assertEqual([obj1.pkvalue()],
+                         [obj.pkvalue() for obj in AModel.objects.all()])
+        self.assertEqual(obj1.id, dj_obj_pk)
+        self.assertEqual(obj1.name, dj_obj1.name)
 
     def test_subscribe(self):
         from django.db import models as dj_models
