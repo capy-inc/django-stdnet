@@ -56,15 +56,36 @@ class Session(session.Session):
             fields = instance._meta.fields
 
         for field in fields:
+            # pre set
             if isinstance(field, (odm.ForeignKey, fields_mod.OneToOneField)):
                 field_name = '%s_id' % field.name
                 field_value = field.get_value(instance).pkvalue()
+            elif isinstance(field, fields_mod.ImageField):
+                field_name = field.name
+                field_value = field.get_value(instance)
+                if field.width_field:
+                    width = getattr(instance, field.width_field)
+                if field.height_field:
+                    height = getattr(instance, field.height_field)
             else:
                 field_name = field.name
                 field_value = field.get_value(instance)
+
             if getattr(django_instance, field_name, UNDEFINED) != field_value:
                 modified = True
                 setattr(django_instance, field_name, field_value)
+
+            # post set
+            # HACK currently, only ImageField affects specified fields by their descriptor
+            if isinstance(field, fields_mod.ImageField):
+                if field.width_field:
+                    django_width = getattr(django_instance, field.width_field)
+                    if width != django_width:
+                        setattr(instance, field.width_field, django_width)
+                if field.height_field:
+                    django_height = getattr(django_instance, field.height_field)
+                    if height != django_height:
+                        setattr(instance, field.height_field, django_height)
 
         if modified:
             # when creation, the instance will be created implicitly by add_from_django_object

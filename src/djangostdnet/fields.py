@@ -174,6 +174,12 @@ class ImageField(odm.Field):
     attr_class = files.ImageFieldFile
 
     def __init__(self, width_field=None, height_field=None, upload_to='', storage=None, *args, **kwargs):
+
+        # ImageField should not be required.
+        # After invoked Django's ImageField.delete() with save=True, the field value is changed to None,
+        # then this field value is also change to None.
+        kwargs.update(required=False)
+
         super(ImageField, self).__init__(*args, **kwargs)
 
         # FileField
@@ -205,7 +211,7 @@ class ImageField(odm.Field):
 
     @width_field.setter
     def width_field(self, value):
-        self._width_field
+        self._width_field = value
 
     @property
     def height_field(self):
@@ -218,7 +224,7 @@ class ImageField(odm.Field):
 
     @height_field.setter
     def height_field(self, value):
-        self._height_field
+        self._height_field = value
 
     def __getattr__(self, item):
         delegate_func = None
@@ -240,7 +246,10 @@ class ImageField(odm.Field):
 
     def to_python(self, value, backend=None):
         if isinstance(value, basestring):
-            return files.ImageFile(self.storage.open(value))
+            if self.storage.exists(value):
+                return files.ImageFile(self.storage.open(value))
+            else:
+                return None
         else:
             return value
 
