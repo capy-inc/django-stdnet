@@ -246,7 +246,7 @@ class ImageField(odm.Field):
 
     def to_python(self, value, backend=None):
         if isinstance(value, basestring):
-            if self.storage.exists(value):
+            if value and self.storage.exists(value):
                 return files.ImageFile(self.storage.open(value))
             else:
                 return None

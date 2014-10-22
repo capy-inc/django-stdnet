@@ -532,6 +532,28 @@ class ImageFieldTestCase(BaseTestCase):
         obj.delete()
         self.assertFalse(os.path.isfile(image_path))
 
+    def test_empty_image(self):
+        from django.db import models as dj_models
+        from djangostdnet import models
+
+        class ADjangoModel(dj_models.Model):
+            image = dj_models.ImageField(width_field='width', height_field='height')
+            width = dj_models.IntegerField(null=True)
+            height = dj_models.IntegerField(null=True)
+
+        class AModel(models.Model):
+
+            class Meta:
+                register = False
+                django_model = ADjangoModel
+
+        self.create_table_for_model(ADjangoModel)
+
+        dj_obj = ADjangoModel.objects.create()
+        obj = AModel.objects.get(id=dj_obj.pk)
+        self.assertFalse(dj_obj.image)
+        self.assertFalse(obj.image)
+
 
 class DateTimeFieldTestCase(BaseTestCase):
     def test_auto_now(self):
