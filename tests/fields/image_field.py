@@ -2,6 +2,21 @@ from ..testcase import BaseTestCase
 
 
 class ImageFieldTestCase(BaseTestCase):
+    def cleanupImage(self, image):
+        import os
+
+        try:
+            image_path = image.path
+        except ValueError:
+            image_path = None
+        if image_path and os.path.isfile(image.path):
+            os.remove(image.path)
+
+    def cleanupStorage(self, storage, path):
+        import shutil
+
+        shutil.rmtree(storage.path(path))
+
     def test_with_django(self):
         import os
         import tempfile
@@ -28,7 +43,7 @@ class ImageFieldTestCase(BaseTestCase):
 
         obj = AModel.objects.new(image=images.ImageFile(open(filename)))
 
-        self.addCleanup(os.remove, obj.image.path)
+        self.addCleanup(self.cleanupImage, obj.image)
 
         dj_obj = ADjangoModel.objects.get(pk=obj.id)
 
@@ -63,10 +78,10 @@ class ImageFieldTestCase(BaseTestCase):
 
         obj = AModel.objects.new(image=images.ImageFile(open(filename)))
 
+        self.addCleanup(self.cleanupImage, obj.image)
+
         self.assertEqual(obj.width, 10)
         self.assertEqual(obj.height, 20)
-
-        self.addCleanup(os.remove, obj.image.path)
 
         dj_obj = ADjangoModel.objects.get(pk=obj.id)
 
@@ -99,6 +114,9 @@ class ImageFieldTestCase(BaseTestCase):
         self.addCleanup(os.remove, filename)
 
         obj = AModel.objects.new(image=images.ImageFile(open(filename), name='test.gif'))
+
+        self.addCleanup(self.cleanupImage, obj.image)
+        self.addCleanup(self.cleanupStorage, obj.image.field.storage, 'image_field_test')
 
         self.assertEqual(obj.width, 10)
         self.assertEqual(obj.height, 20)
@@ -142,6 +160,8 @@ class ImageFieldTestCase(BaseTestCase):
 
         obj = AModel.objects.new(image=images.ImageFile(open(filename)))
 
+        self.addCleanup(self.cleanupImage, obj.image)
+
         dj_obj = ADjangoModel.objects.get(pk=obj.id)
 
         dj_obj.image.open()
@@ -177,6 +197,8 @@ class ImageFieldTestCase(BaseTestCase):
         self.addCleanup(os.remove, filename)
 
         obj = AModel.objects.new(image=images.ImageFile(open(filename)))
+
+        self.addCleanup(self.cleanupImage, obj.image)
 
         dj_obj = ADjangoModel.objects.get(pk=obj.id)
 
