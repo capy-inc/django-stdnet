@@ -198,3 +198,51 @@ class ImageFieldTestCase(BaseTestCase):
         self.assertFalse(dj_obj.image)
         self.assertFalse(obj.image)
 
+    def test_upload_to_func_with_django(self):
+        import os
+        from django.conf import settings
+        from django.db import models as dj_models
+        from djangostdnet import models
+
+        def gen_custom_path(instance, filename):
+            return 'custom_path/%s' % filename
+
+        class ADjangoModel(dj_models.Model):
+            image = dj_models.ImageField(upload_to=gen_custom_path)
+
+        class AModel(models.Model):
+            class Meta:
+                django_model = ADjangoModel
+                register = False
+
+        self.create_table_for_model(ADjangoModel)
+
+        image = self.allocateImage()
+        obj = AModel.objects.new(image=image)
+        self.addCleanup(self.cleanupImage, obj.image)
+
+        dj_obj = ADjangoModel.objects.get(pk=obj.id)
+
+        self.assertTrue(obj.image.path.startswith(os.path.join(settings.MEDIA_ROOT, 'custom_path')))
+        self.assertTrue(dj_obj.image.path.startswith(os.path.join(settings.MEDIA_ROOT, 'custom_path')))
+        self.assertEqual(obj.image.path, dj_obj.image.path)
+
+    def test_upload_to_func_without_django(self):
+        import os
+        from django.conf import settings
+        from djangostdnet import models
+
+        def gen_custom_path(instance, filename):
+            return 'custom_path/%s' % filename
+
+        class AModel(models.Model):
+            image = models.ImageField(upload_to=gen_custom_path)
+
+            class Meta:
+                register = False
+
+        image = self.allocateImage()
+        obj = AModel.objects.new(image=image)
+        self.addCleanup(self.cleanupImage, obj.image)
+
+        self.assertTrue(obj.image.path.startswith(os.path.join(settings.MEDIA_ROOT, 'custom_path')))
