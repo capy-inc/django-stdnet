@@ -93,6 +93,9 @@ class ModelMeta(odm.ModelType):
                             raise ValueError("Can't make implicit model relation: %s", field.name)
                         model = rels[0].model
                         dct[field.name] = odm_field(model, **field_params)
+                    elif isclass(odm_field_or_callable) and issubclass(odm_field_or_callable, ImageField):
+                        odm_field = odm_field_or_callable
+                        dct[field.name] = odm_field(upload_to=field.upload_to, **field_params)
                     else:
                         if isclass(odm_field_or_callable) and issubclass(odm_field_or_callable, odm.Field):
                             odm_field = odm_field_or_callable
