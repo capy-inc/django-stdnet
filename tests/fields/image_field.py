@@ -2,6 +2,19 @@ from ..testcase import BaseTestCase
 
 
 class ImageFieldTestCase(BaseTestCase):
+    def allocateImage(self):
+        from django.core.files import images
+        import os
+        from PIL import Image
+        import tempfile
+
+        (fd, filename) = tempfile.mkstemp()
+        _image = Image.new('RGB', (10, 20))
+        _image.save(os.fdopen(fd, 'wb'), 'gif')
+        self.addCleanup(os.remove, filename)
+
+        return images.ImageFile(open(filename), name='test.gif')
+
     def cleanupImage(self, image):
         import os
 
@@ -18,10 +31,6 @@ class ImageFieldTestCase(BaseTestCase):
         shutil.rmtree(storage.path(path))
 
     def test_with_django(self):
-        import os
-        import tempfile
-        from PIL import Image
-        from django.core.files import images
         from django.db import models as dj_models
         from djangostdnet import models
 
@@ -35,14 +44,8 @@ class ImageFieldTestCase(BaseTestCase):
 
         self.create_table_for_model(ADjangoModel)
 
-        (fd, filename) = tempfile.mkstemp()
-        image = Image.new('RGB', (10, 20))
-        image.save(os.fdopen(fd, 'wb'), 'gif')
-
-        self.addCleanup(os.remove, filename)
-
-        obj = AModel.objects.new(image=images.ImageFile(open(filename)))
-
+        image = self.allocateImage()
+        obj = AModel.objects.new(image=image)
         self.addCleanup(self.cleanupImage, obj.image)
 
         dj_obj = ADjangoModel.objects.get(pk=obj.id)
@@ -51,10 +54,6 @@ class ImageFieldTestCase(BaseTestCase):
         self.assertEqual(dj_obj.image.read(6), 'GIF87a')
 
     def test_with_django_dimension_fields(self):
-        import os
-        import tempfile
-        from PIL import Image
-        from django.core.files import images
         from django.db import models as dj_models
         from djangostdnet import models
 
@@ -70,14 +69,8 @@ class ImageFieldTestCase(BaseTestCase):
 
         self.create_table_for_model(ADjangoModel)
 
-        (fd, filename) = tempfile.mkstemp()
-        image = Image.new('RGB', (10, 20))
-        image.save(os.fdopen(fd, 'wb'), 'gif')
-
-        self.addCleanup(os.remove, filename)
-
-        obj = AModel.objects.new(image=images.ImageFile(open(filename)))
-
+        image = self.allocateImage()
+        obj = AModel.objects.new(image=image)
         self.addCleanup(self.cleanupImage, obj.image)
 
         self.assertEqual(obj.width, 10)
@@ -92,9 +85,6 @@ class ImageFieldTestCase(BaseTestCase):
 
     def test_without_django(self):
         import os
-        import tempfile
-        from PIL import Image
-        from django.core.files import images
         from stdnet import odm
         from djangostdnet import models
 
@@ -107,14 +97,8 @@ class ImageFieldTestCase(BaseTestCase):
             class Meta:
                 register = False
 
-        (fd, filename) = tempfile.mkstemp()
-        image = Image.new('RGB', (10, 20))
-        image.save(os.fdopen(fd, 'wb'), 'gif')
-
-        self.addCleanup(os.remove, filename)
-
-        obj = AModel.objects.new(image=images.ImageFile(open(filename), name='test.gif'))
-
+        image = self.allocateImage()
+        obj = AModel.objects.new(image=image)
         self.addCleanup(self.cleanupImage, obj.image)
         self.addCleanup(self.cleanupStorage, obj.image.field.storage, 'image_field_test')
 
@@ -136,9 +120,6 @@ class ImageFieldTestCase(BaseTestCase):
 
     def test_delete_from_django(self):
         import os
-        import tempfile
-        from PIL import Image
-        from django.core.files import images
         from django.db import models as dj_models
         from djangostdnet import models
 
@@ -152,14 +133,8 @@ class ImageFieldTestCase(BaseTestCase):
 
         self.create_table_for_model(ADjangoModel)
 
-        (fd, filename) = tempfile.mkstemp()
-        image = Image.new('RGB', (10, 20))
-        image.save(os.fdopen(fd, 'wb'), 'gif')
-
-        self.addCleanup(os.remove, filename)
-
-        obj = AModel.objects.new(image=images.ImageFile(open(filename)))
-
+        image = self.allocateImage()
+        obj = AModel.objects.new(image=image)
         self.addCleanup(self.cleanupImage, obj.image)
 
         dj_obj = ADjangoModel.objects.get(pk=obj.id)
@@ -174,9 +149,6 @@ class ImageFieldTestCase(BaseTestCase):
 
     def test_delete_from_django_stdnet(self):
         import os
-        import tempfile
-        from PIL import Image
-        from django.core.files import images
         from django.db import models as dj_models
         from djangostdnet import models
 
@@ -190,14 +162,8 @@ class ImageFieldTestCase(BaseTestCase):
 
         self.create_table_for_model(ADjangoModel)
 
-        (fd, filename) = tempfile.mkstemp()
-        image = Image.new('RGB', (10, 20))
-        image.save(os.fdopen(fd, 'wb'), 'gif')
-
-        self.addCleanup(os.remove, filename)
-
-        obj = AModel.objects.new(image=images.ImageFile(open(filename)))
-
+        image = self.allocateImage()
+        obj = AModel.objects.new(image=image)
         self.addCleanup(self.cleanupImage, obj.image)
 
         dj_obj = ADjangoModel.objects.get(pk=obj.id)
@@ -231,3 +197,4 @@ class ImageFieldTestCase(BaseTestCase):
         obj = AModel.objects.get(id=dj_obj.pk)
         self.assertFalse(dj_obj.image)
         self.assertFalse(obj.image)
+
