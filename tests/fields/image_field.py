@@ -35,7 +35,7 @@ class ImageFieldTestCase(BaseTestCase):
         dj_obj.image.open()
         self.assertEqual(dj_obj.image.read(6), 'GIF87a')
 
-    def test_with_django_dimention_fields(self):
+    def test_with_django_dimension_fields(self):
         import os
         import tempfile
         from PIL import Image
