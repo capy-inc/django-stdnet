@@ -244,15 +244,6 @@ class ImageField(odm.Field):
 
         return value.name
 
-    def to_python(self, value, backend=None):
-        if isinstance(value, basestring):
-            if value and self.storage.exists(value):
-                return files.ImageFile(self.storage.open(value))
-            else:
-                return None
-        else:
-            return value
-
 
 class IPAddressField(odm.SymbolField):
     pass
