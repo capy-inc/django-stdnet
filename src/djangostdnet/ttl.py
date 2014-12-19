@@ -15,36 +15,48 @@ class TTLBackendQueryWrapper(object):
     def __init__(self, query_class, obj, **kwargs):
         self.query = query_class(obj, **kwargs)
 
+    def __getitem__(self, slic):
+        if isinstance(slic, slice):
+            return self._purge_expired_items(self.query[slic])
+        elif isinstance(slic, int):
+            item = None
+            while item is None:
+                item = self._purge_expired(self.query[slic])
+                slic += 1
+            return item
+
     def __getattr__(self, item):
         return getattr(self.query, item)
 
-    def _wrap_purge_expired(self, callback):
+    def _wrap_purge_expired_items(self, callback):
         def f(result):
-            return callback(self._purge_expired(result))
+            return callback(self._purge_expired_items(result))
         return f
 
-    def _purge_expired(self, items):
-        result = []
-        for item in items:
-            ttl_fields = [field for field in item._meta.fields
-                          if isinstance(field, TTLField)]
-            if len(ttl_fields) != 1:
-                raise IOError("Support only one ttl field per model: %s", item._meta.model)
-            ttl_field = ttl_fields[0]
-            ttl_value = ttl_field.get_value(item)
-            if ttl_value is not None and ttl_value < 0:
-                item.delete()
-            else:
-                result.append(item)
-        return result
+    def _purge_expired(self, item):
+        ttl_fields = [field for field in item._meta.fields
+                      if isinstance(field, TTLField)]
+        if len(ttl_fields) != 1:
+            raise IOError("Support only one ttl field per model: %s", item._meta.model)
+        ttl_field = ttl_fields[0]
+        ttl_value = ttl_field.get_value(item)
+        if ttl_value is not None and ttl_value < 0:
+            item.delete()
+            return None
+        else:
+            return item
+
+    def _purge_expired_items(self, items):
+        return [item for item in items
+                if self._purge_expired(item) is not None]
 
     def items(self, slic=None, callback=None):
         if callback is not None:
-            callback = self._wrap_purge_expired(callback)
+            callback = self._wrap_purge_expired_items(callback)
             return getattr(self.query, 'items')(slic, callback)
         else:
             items = getattr(self.query, 'items')(slic, None)
-            return self._purge_expired(items)
+            return self._purge_expired_items(items)
 
 
 class TTLBackendMiddleware(object):
