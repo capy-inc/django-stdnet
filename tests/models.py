@@ -41,8 +41,18 @@ class ConnectionSettingTestCase(BaseTestCase):
         backend_url = 'redis://localhost:5555?db=1'
         read_backend_url = 'redis://localhost:5555?db=2'
 
-        # specify backend url as both
+        # specify same backend url for baackends
         with self.settings(STDNET_BACKENDS={'custom': backend_url}):
+            class AModel(models.Model):
+                name = odm.CharField()
+
+                class Meta:
+                    register = False
+                    backend = 'custom'
+
+            self.assertEqual(AModel.objects.backend.connection_string, backend_url)
+            self.assertEqual(AModel.objects.read_backend.connection_string, backend_url)
+
             class AModel(models.Model):
                 name = odm.CharField()
 
@@ -51,10 +61,10 @@ class ConnectionSettingTestCase(BaseTestCase):
                     backend = 'custom'
                     read_backend = 'custom'
 
-        self.assertEqual(AModel.objects.backend.connection_string, backend_url)
-        self.assertEqual(AModel.objects.read_backend.connection_string, backend_url)
+            self.assertEqual(AModel.objects.backend.connection_string, backend_url)
+            self.assertEqual(AModel.objects.read_backend.connection_string, backend_url)
 
-        # specify backend and read_backend url
+        # specify individual backend url for each backend
         with self.settings(STDNET_BACKENDS={'custom': {'BACKEND': backend_url,
                                                        'READ_BACKEND': read_backend_url}}):
             class AModel(models.Model):
@@ -63,10 +73,53 @@ class ConnectionSettingTestCase(BaseTestCase):
                 class Meta:
                     register = False
                     backend = 'custom'
+
+            self.assertEqual(AModel.objects.backend.connection_string, backend_url)
+            self.assertEqual(AModel.objects.read_backend.connection_string, read_backend_url)
+
+            class AModel(models.Model):
+                name = odm.CharField()
+
+                class Meta:
+                    register = False
+                    backend = 'custom'
                     read_backend = 'custom'
 
-        self.assertEqual(AModel.objects.backend.connection_string, backend_url)
-        self.assertEqual(AModel.objects.read_backend.connection_string, read_backend_url)
+            self.assertEqual(AModel.objects.backend.connection_string, backend_url)
+            self.assertEqual(AModel.objects.read_backend.connection_string, read_backend_url)
+
+
+    def test_vertical_sharding(self):
+        from stdnet import odm
+        from djangostdnet import models
+
+        parent_backend_url = 'redis://localhost:5555?db=1'
+        parent_read_backend_url = 'redis://localhost:5555?db=2'
+        child_backend_url = 'redis://localhost:5555?db=3'
+        child_read_backend_url = 'redis://localhost:5555?db=4'
+        with self.settings(STDNET_BACKENDS={'parent': {'BACKEND': parent_backend_url,
+                                                       'READ_BACKEND': parent_read_backend_url},
+                                            'child': {'BACKEND': child_backend_url,
+                                                      'READ_BACKEND': child_read_backend_url}}):
+
+            class AParentModel(models.Model):
+                name = odm.SymbolField()
+
+                class Meta:
+                    register = False
+                    backend = 'parent'
+
+            class AChildModel(models.Model):
+                parent = odm.ForeignKey(AParentModel, unique=True)
+
+                class Meta:
+                    register = False
+                    backend = 'child'
+
+        self.assertEqual(AParentModel.objects.backend.connection_string, parent_backend_url)
+        self.assertEqual(AParentModel.objects.read_backend.connection_string, parent_read_backend_url)
+        self.assertEqual(AChildModel.objects.backend.connection_string, child_backend_url)
+        self.assertEqual(AChildModel.objects.read_backend.connection_string, child_read_backend_url)
 
 
 class ModelSaveTestCase(BaseTestCase):

@@ -112,6 +112,8 @@ class ModelMeta(odm.ModelType):
         meta_read_backend = getattr(meta, 'read_backend', None)
         if hasattr(meta, 'read_backend'):
             del meta.read_backend
+        if meta_read_backend is None:
+            meta_read_backend = meta_backend
 
         if meta_backend in settings.STDNET_BACKENDS:
             value = settings.STDNET_BACKENDS[meta_backend]
@@ -123,7 +125,8 @@ class ModelMeta(odm.ModelType):
         if meta_read_backend in settings.STDNET_BACKENDS:
             value = settings.STDNET_BACKENDS[meta_read_backend]
             if isinstance(value, dict):
-                meta_read_backend = value['READ_BACKEND']
+                # first obtain READ_BACKEND, fallback to BACKEND which must be.
+                meta_read_backend = value.get('READ_BACKEND', value['BACKEND'])
             else:
                 meta_read_backend = value
 
