@@ -1,4 +1,4 @@
--e git+https://github.com/jbking/python-stdnet.git@4228128bd162480286f480bdc5d2b6527a757ae5#egg=python_stdnet
+-e git+https://github.com/jbking/python-stdnet.git@36a2353c2d6bbb1b08b4acc1f9651c40c91c1e02#egg=python_stdnet
 six==1.7.3
 Pillow
-Django>=1.6,<1.7
+Django>=1.6,<1.9
