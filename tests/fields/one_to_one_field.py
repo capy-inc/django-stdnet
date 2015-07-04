@@ -22,6 +22,7 @@ class OneToOneFieldTestCase(BaseTestCase):
                 django_model = ADjangoChildModel
                 register = False
 
+        self.finish_defining_models()
         self.create_table_for_model(ADjangoParentModel)
         self.create_table_for_model(ADjangoChildModel)
 
@@ -161,6 +162,7 @@ class OneToOneFieldTestCase(BaseTestCase):
                 django_model = ADjangoChildModel
                 register = False
 
+        self.finish_defining_models()
         self.create_table_for_model(ADjangoParentModel)
         self.create_table_for_model(ADjangoChildModel)
 
@@ -197,6 +199,7 @@ class OneToOneFieldTestCase(BaseTestCase):
                 django_model = ADjangoChildModel
                 register = False
 
+        self.finish_defining_models()
         self.create_table_for_model(ADjangoParentModel)
         self.create_table_for_model(ADjangoChildModel)
 
@@ -231,6 +234,7 @@ class OneToOneFieldTestCase(BaseTestCase):
                 django_model = ADjangoChildModel
                 register = False
 
+        self.finish_defining_models()
         self.create_table_for_model(ADjangoParentModel)
         self.create_table_for_model(ADjangoChildModel)
 
@@ -267,6 +271,7 @@ class OneToOneFieldTestCase(BaseTestCase):
                 django_model = ADjangoChildModel
                 register = False
 
+        self.finish_defining_models()
         self.create_table_for_model(ADjangoParentModel)
         self.create_table_for_model(ADjangoChildModel)
 
