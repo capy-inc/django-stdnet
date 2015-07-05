@@ -16,17 +16,24 @@ class TTLTestCase(BaseTestCase):
             class Meta:
                 register = False
 
-        # must not be raise ObjectDoesNotExist when ttl is positive
+        obj = AModel.objects.new(name='foo', ttl=None)
+        self.assertEqual(AModel.objects.get(id=obj.id).ttl, None,
+                         "Must not raise ObjectDoesNotExist if TTL is not set")
+
         obj = AModel.objects.new(name='foo', ttl=10)
-        AModel.objects.get(id=obj.id)
+        self.assertEqual(AModel.objects.get(id=obj.id).ttl, 10,
+                         "Must not raise ObjectDoesNotExist if TTL is effective")
 
         obj = AModel.objects.new(name='foo', ttl=-1)
-        with self.assertRaises(AModel.DoesNotExist):
+        with self.assertRaises(AModel.DoesNotExist,
+                               msg="Must raise ObjectDoesNotExist if TTL is expired"):
             AModel.objects.get(id=obj.id)
 
         with freeze_time('1970-01-01'):
             obj = AModel.objects.new(name='foo', ttl=10)
-        with self.assertRaises(AModel.DoesNotExist):
+        with self.assertRaises(AModel.DoesNotExist,
+                               msg="Even TTL value is positive, "
+                               "Must raise ObjectDoesNotExist if its expired"):
             AModel.objects.get(id=obj.id)
 
     def _make_simple_ttl_instances(self):
