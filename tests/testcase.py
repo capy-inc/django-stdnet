@@ -1,20 +1,39 @@
 from distutils.version import LooseVersion
 import django
 from django.test import TestCase
+import testing.redis
 
 DJANGO_VERSION = LooseVersion(django.get_version())
 
 
 class BaseTestCase(TestCase):
     app_label = 'test'
+    redis_server = None
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        super(BaseTestCase, cls).setUpClass()
+        cls.redis_server = testing.redis.RedisServer()
+        cls.redis_server.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        super(BaseTestCase, cls).tearDownClass()
+        cls.redis_server.stop()
+
+    def _setup_redis_db(self):
         from djangostdnet import models
         from djangostdnet import mapper
+
+        models.mapper = mapper.Mapper(default_backend='redis://%(host)s:%(port)d?db=%(db)d' % self.redis_server.dsn(),
+                                      install_global=True)
+
+    def setUp(self):
         from django.core.management.color import no_style
         from django.db.models import loading
 
-        models.mapper = mapper.Mapper(default_backend='redis://localhost:6379?db=0', install_global=True)
+        self._setup_redis_db()
+
         self.seen_models = set()
         self.style = no_style()
 
@@ -44,7 +63,7 @@ class BaseTestCase(TestCase):
 
     def _clear_redis_db(self):
         import redis
-        r = redis.from_url('redis://localhost:6379?db=0')
+        r = redis.from_url('redis://%(host)s:%(port)d?db=%(db)d' % self.redis_server.dsn())
         r.flushdb()
 
     def tearDown(self):

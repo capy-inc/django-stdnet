@@ -1,3 +1,4 @@
+from six import b
 from ..testcase import BaseTestCase
 
 
@@ -13,7 +14,7 @@ class ImageFieldTestCase(BaseTestCase):
         _image.save(os.fdopen(fd, 'wb'), 'gif')
         self.addCleanup(os.remove, filename)
 
-        return images.ImageFile(open(filename), name='test.gif')
+        return images.ImageFile(open(filename, 'rb'), name='test.gif')
 
     def cleanupImage(self, image):
         import os
@@ -51,7 +52,7 @@ class ImageFieldTestCase(BaseTestCase):
         dj_obj = ADjangoModel.objects.get(pk=obj.id)
 
         dj_obj.image.open()
-        self.assertEqual(dj_obj.image.read(6), 'GIF87a')
+        self.assertEqual(dj_obj.image.read(6), b('GIF87a'))
 
     def test_without_django(self):
         from djangostdnet import models
@@ -73,7 +74,7 @@ class ImageFieldTestCase(BaseTestCase):
         obj = AModel.objects.get(id=obj.id)
 
         obj.image.open()
-        self.assertEqual(obj.image.read(6), 'GIF87a')
+        self.assertEqual(obj.image.read(6), b('GIF87a'))
 
     def test_dimension_fields_with_django(self):
         from django.db import models as dj_models
@@ -150,7 +151,7 @@ class ImageFieldTestCase(BaseTestCase):
         dj_obj = ADjangoModel.objects.get(pk=obj.id)
 
         dj_obj.image.open()
-        self.assertEqual(dj_obj.image.read(6), 'GIF87a')
+        self.assertEqual(dj_obj.image.read(6), b('GIF87a'))
 
         image_path = dj_obj.image.path
         dj_obj.image.delete()
@@ -179,7 +180,7 @@ class ImageFieldTestCase(BaseTestCase):
         dj_obj = ADjangoModel.objects.get(pk=obj.id)
 
         dj_obj.image.open()
-        self.assertEqual(dj_obj.image.read(6), 'GIF87a')
+        self.assertEqual(dj_obj.image.read(6), b('GIF87a'))
 
         image_path = obj.image.path
         obj.image.delete()

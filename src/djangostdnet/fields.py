@@ -1,5 +1,7 @@
 from decimal import Decimal
 from django.db.models.fields import files
+from django.utils.encoding import smart_text
+from six import binary_type
 from stdnet import odm
 from stdnet.odm import related
 from stdnet.odm.globals import JSPLITTER
@@ -243,6 +245,15 @@ class ImageField(odm.Field):
             value.save(value.name, value, save=False)
 
         return value.name
+
+    def to_python(self, value, backend=None):
+        if value is None:
+            return None
+
+        if isinstance(value, binary_type):
+            return smart_text(value)
+
+        return value
 
 
 class IPAddressField(odm.SymbolField):
