@@ -1,31 +1,19 @@
 from distutils.version import LooseVersion
 import django
 from django.test import TestCase
-import testing.redis
 
 DJANGO_VERSION = LooseVersion(django.get_version())
 
 
 class BaseTestCase(TestCase):
     app_label = 'test'
-    redis_server = None
-
-    @classmethod
-    def setUpClass(cls):
-        super(BaseTestCase, cls).setUpClass()
-        cls.redis_server = testing.redis.RedisServer()
-        cls.redis_server.start()
-
-    @classmethod
-    def tearDownClass(cls):
-        super(BaseTestCase, cls).tearDownClass()
-        cls.redis_server.stop()
 
     def _setup_redis_db(self):
         from djangostdnet import models
         from djangostdnet import mapper
+        from . import redis_server_info
 
-        models.mapper = mapper.Mapper(default_backend='redis://%(host)s:%(port)d?db=%(db)d' % self.redis_server.dsn(),
+        models.mapper = mapper.Mapper(default_backend='redis://%(host)s:%(port)d?db=%(db)d' % redis_server_info,
                                       install_global=True)
 
     def setUp(self):
@@ -63,7 +51,9 @@ class BaseTestCase(TestCase):
 
     def _clear_redis_db(self):
         import redis
-        r = redis.from_url('redis://%(host)s:%(port)d?db=%(db)d' % self.redis_server.dsn())
+        from . import redis_server_info
+
+        r = redis.from_url('redis://%(host)s:%(port)d?db=%(db)d' % redis_server_info)
         r.flushdb()
 
     def tearDown(self):
