@@ -26,6 +26,7 @@ _mapping = {
     models.DateField: odm.DateField,
     models.DateTimeField: odm.DateTimeField,
     models.ForeignKey: odm.ForeignKey,
+    models.ManyToManyField: odm.ManyToManyField,
     models.OneToOneField: OneToOneField,
     models.ImageField: ImageField,
     models.IPAddressField: IPAddressField
@@ -34,6 +35,25 @@ _mapping = {
 
 def register_field_mapping(django_field, stdnet_field_or_callable):
     _mapping[django_field] = stdnet_field_or_callable
+
+
+class Registry(object):
+    def __init__(self):
+        self.django_to_stdnet = {}
+        self.stdnet_to_django = {}
+
+    def register(self, django_model, stdnet_model):
+        self.django_to_stdnet[django_model] = stdnet_model
+        self.stdnet_to_django[stdnet_model] = django_model
+
+    def get_django_model(self, stdnet_model):
+        return self.stdnet_to_django[stdnet_model]
+
+    def get_stdnet_model(self, django_model):
+        return self.django_to_stdnet[django_model]
+
+
+registry = Registry()
 
 
 class ModelMeta(odm.ModelType):
@@ -61,6 +81,7 @@ class ModelMeta(odm.ModelType):
     def __new__(mcs, name, bases, dct):
         meta = dct.get('Meta', None)
         meta_model = getattr(meta, 'django_model', None)
+        meta_through = {}
         if meta_model:
             class Meta(object):
                 model = meta_model
@@ -72,9 +93,12 @@ class ModelMeta(odm.ModelType):
             dct['__getattr__'] = mcs.proxy__getattr__
             dct['_instance'] = None
             # generate odm fields by django orm fields
-            for field in meta_model._meta.fields:
+            for field in meta_model._meta.get_fields():
                 # when overriden on StdnetModel
                 if field.name in dct:
+                    continue
+
+                if not field.concrete:
                     continue
 
                 field_params = {
@@ -85,7 +109,9 @@ class ModelMeta(odm.ModelType):
                 }
                 if field.__class__ in _mapping:
                     odm_field_or_callable = _mapping[field.__class__]
-                    if isclass(odm_field_or_callable) and issubclass(odm_field_or_callable, (odm.ForeignKey, OneToOneField)):
+                    if isclass(odm_field_or_callable) and issubclass(odm_field_or_callable, (odm.ForeignKey,
+                                                                                             OneToOneField,
+                                                                                             odm.ManyToManyField)):
                         odm_field = odm_field_or_callable
                         rels = [meta for meta in mapper.registered_models
                                 if hasattr(meta.model, '_django_meta') and meta.model._django_meta.model == field.rel.to]
@@ -93,6 +119,8 @@ class ModelMeta(odm.ModelType):
                             raise ValueError("Can't make implicit model relation: %s", field.name)
                         model = rels[0].model
                         dct[field.name] = odm_field(model, **field_params)
+                        if field.__class__ == models.ManyToManyField:
+                            meta_through[field.name] = field.rel.through
                     elif isclass(odm_field_or_callable) and issubclass(odm_field_or_callable, ImageField):
                         odm_field = odm_field_or_callable
                         dct[field.name] = odm_field(upload_to=field.upload_to, **field_params)
@@ -135,6 +163,8 @@ class ModelMeta(odm.ModelType):
         mapper.register(model, meta_backend, meta_read_backend)
 
         if meta_model:
+            registry.register(meta_model, model)
+
             # TODO move pre_save handler from stdnet defined in session here.
             def post_save_handle_from_django(instance, **kwargs):
                 manager = mapper[model]
@@ -148,8 +178,37 @@ class ModelMeta(odm.ModelType):
                 meta_model.objects.filter(pk__in=instances).delete()
 
             signals.post_save.connect(post_save_handle_from_django, sender=meta_model, weak=False)
+            # XXX Why not this is pre_delete?
             signals.post_delete.connect(post_delete_handle_from_django, sender=meta_model, weak=False)
             mapper.post_delete.bind(post_delete_handle_from_stdnet, sender=model)
+
+        # for many-to-many
+        if meta_through:
+            for field_name in meta_through:
+
+                # To obtain relation manager in stdnet, pass field_name through closure
+                def f(meta_through, field_name):
+                    meta_rel_model = meta_through[field_name]
+
+                    def m2m_changed_handle_from_django(instance, action, model, pk_set, **kwargs):
+                        source_instance = registry.get_stdnet_model(instance.__class__).objects.get(id=instance.pk)
+                        collection = getattr(source_instance, field_name)
+                        target_model = registry.get_stdnet_model(model)
+                        # Need measurement. get/set per each vs. bulk processing for KVS
+                        if action == 'post_add':
+                            for pk in pk_set:
+                                collection.add(target_model.objects.get(id=pk))
+                        elif action == 'pre_remove':
+                            for pk in pk_set:
+                                collection.remove(target_model.objects.get(id=pk))
+
+                    # XXX post_delete_handle_from_stdnet
+                    # XXX pre_save_from_stdnet
+                    # XXX multiple many-to-many relation with same models???
+                    # XXX Is weak=False needed actually??
+                    signals.m2m_changed.connect(m2m_changed_handle_from_django, sender=meta_rel_model, weak=False)
+
+                f(meta_through, field_name)
 
         return model
 

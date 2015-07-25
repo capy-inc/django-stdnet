@@ -49,5 +49,16 @@ class ManyToManyTestCase(BaseTestCase):
         self.assertEquals(computed_neighbor.neighbors.get(), dj_obj, "Cyclic Check of Relation on Django")
 
         obj = self.std_model_a.objects.get()
-        self.skipTest("Doesn't support translated ManyToManyRelation at all")
-        self.assertTrue(obj.modelb_set.get().neighbors.get() == obj, "Cyclic Check of Relation on Stdnet")
+        neighbor_std = self.std_model_b.objects.get()
+
+        computed_neighbor_std = obj.modelb_set.get()
+        self.assertEquals(neighbor_std, computed_neighbor_std, "Cyclic Check of Relation on Stdnet")
+        self.assertEquals(computed_neighbor_std.neighbors.get(), obj, "Cyclic Check of Relation on Stdnet")
+
+        neighbor.neighbors.remove(dj_obj)
+        self.assertEquals(len(obj.modelb_set.all()), 0)
+        self.assertEquals(len(neighbor_std.neighbors.all()), 0)
+
+
+# XXX create a test with specified many-to-many back ref
+# XXX create a test for creating obj from stdnet side
