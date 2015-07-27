@@ -137,6 +137,8 @@ class ModelMeta(odm.ModelType):
                         if len(rels) != 1:
                             raise ValueError("Can't make implicit model relation: %s", field.name)
                         model = rels[0].model
+                        if field.__class__ == models.ManyToManyField:
+                            field_params['related_name'] = field.rel.related_name
                         dct[field.name] = odm_field(model, **field_params)
                         if field.__class__ == models.ManyToManyField:
                             meta_through[field.name] = field.rel.through
