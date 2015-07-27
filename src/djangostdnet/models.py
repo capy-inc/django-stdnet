@@ -1,5 +1,6 @@
 # -*- encoding: utf8 -*-
 from collections import defaultdict
+from distutils.version import LooseVersion
 import logging
 from inspect import isclass
 import threading
@@ -9,6 +10,7 @@ from django.db import models
 from django.db.models import signals
 from six import with_metaclass
 from stdnet import odm
+from . import DJANGO_VERSION
 from .mapper import Mapper
 from .fields import OneToOneField, ImageField, IPAddressField, DecimalField, DateTimeField
 
@@ -75,6 +77,15 @@ class ThreadGate(object):
             del self.states[thread_id]
 
 
+if LooseVersion('1.8') <= DJANGO_VERSION:
+    def get_fields(opts):
+        return opts.get_fields()
+else:
+    # prior to 1.8
+    def get_fields(opts):
+        return opts.fields + opts.many_to_many
+
+
 class ModelMeta(odm.ModelType):
     @staticmethod
     def proxy__getattr__(instance, name):
@@ -112,12 +123,12 @@ class ModelMeta(odm.ModelType):
             dct['__getattr__'] = mcs.proxy__getattr__
             dct['_instance'] = None
             # generate odm fields by django orm fields
-            for field in meta_model._meta.get_fields():
+            for field in get_fields(meta_model._meta):
                 # when overriden on StdnetModel
                 if field.name in dct:
                     continue
 
-                if not field.concrete:
+                if not getattr(field, 'concrete', True):
                     continue
 
                 field_params = {

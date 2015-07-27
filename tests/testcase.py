@@ -1,8 +1,5 @@
 from distutils.version import LooseVersion
-import django
 from django.test import TestCase
-
-DJANGO_VERSION = LooseVersion(django.get_version())
 
 
 class BaseTestCase(TestCase):
@@ -19,6 +16,7 @@ class BaseTestCase(TestCase):
     def setUp(self):
         from django.core.management.color import no_style
         from django.db.models import loading
+        from djangostdnet import DJANGO_VERSION
 
         self._setup_redis_db()
 
@@ -39,6 +37,7 @@ class BaseTestCase(TestCase):
 
     def _clear_registered_models(self):
         from django.db.models import loading
+        from djangostdnet import DJANGO_VERSION
 
         # HACK
         if LooseVersion('1.6') <= DJANGO_VERSION < LooseVersion('1.7'):
@@ -74,6 +73,7 @@ class BaseTestCase(TestCase):
 
     def finish_defining_models(self):
         from django.db.models import loading
+        from djangostdnet import DJANGO_VERSION
 
         if LooseVersion('1.7') <= DJANGO_VERSION:
             loading.cache.populate([self.app])
