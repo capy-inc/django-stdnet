@@ -39,7 +39,7 @@ class ManyToManyTestCase(BaseTestCase):
         self.std_model_a = ModelA
         self.std_model_b = ModelB
 
-    def test_many_to_many(self):
+    def test_many_to_many_from_django(self):
         dj_obj = self.dj_model_a.objects.create(name='foo')
         neighbor = self.dj_model_b.objects.create()
         neighbor.neighbors.add(dj_obj)
@@ -59,6 +59,25 @@ class ManyToManyTestCase(BaseTestCase):
         self.assertEquals(len(obj.modelb_set.all()), 0)
         self.assertEquals(len(neighbor_std.neighbors.all()), 0)
 
+    def test_many_to_many_from_stdnet(self):
+        std_obj = self.std_model_a.objects.new(name='foo')
+        neighbor = self.std_model_b.objects.new()
+        neighbor.neighbors.add(std_obj)
+
+        computed_neighbor = std_obj.modelb_set.get()
+        self.assertEquals(neighbor, computed_neighbor, "Cyclic Check of Relation on Stdnet")
+        self.assertEquals(computed_neighbor.neighbors.get(), std_obj, "Cyclic Check of Relation on Stdnet")
+
+        dj_obj = self.dj_model_a.objects.get()
+        dj_neighbor = self.dj_model_b.objects.get()
+
+        dj_computed_neighbor = dj_obj.djangomodelb_set.get()
+        self.assertEquals(dj_neighbor, dj_computed_neighbor, "Cyclic Check of Relation on Django")
+        self.assertEquals(dj_computed_neighbor.neighbors.get(), dj_obj, "Cyclic Check of Relation on Django")
+
+        neighbor.neighbors.remove(std_obj)
+        self.assertEquals(len(dj_obj.djangomodelb_set.all()), 0)
+        self.assertEquals(len(dj_neighbor.neighbors.all()), 0)
+
 
 # XXX create a test with specified many-to-many back ref
-# XXX create a test for creating obj from stdnet side

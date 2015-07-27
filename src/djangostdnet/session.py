@@ -49,15 +49,16 @@ class Session(session.Session):
             creation = True
             modified = True
             # primary key will be obtained from django model instance
-            fields = [field for field in instance._meta.fields
+            fields = [field for field in instance._meta.dfields.values()
                       if field != instance._meta.pk]
         else:
             creation = False
-            fields = instance._meta.fields
+            fields = instance._meta.dfields.values()
 
         for field in fields:
             # pre set
             if isinstance(field, (odm.ForeignKey, fields_mod.OneToOneField)):
+                # ManyToManyField must not be here. Because its not an actual field
                 field_name = '%s_id' % field.name
                 field_value = field.get_value(instance).pkvalue()
             elif isinstance(field, fields_mod.ImageField):

@@ -49,6 +49,10 @@ class BaseTestCase(TestCase):
         else:
             raise NotImplementedError
 
+        from stdnet.odm import globals
+
+        globals._model_dict.clear()
+
     def _clear_redis_db(self):
         import redis
         from . import redis_server_info

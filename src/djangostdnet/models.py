@@ -1,6 +1,8 @@
 # -*- encoding: utf8 -*-
+from collections import defaultdict
 import logging
 from inspect import isclass
+import threading
 
 from django.conf import settings
 from django.db import models
@@ -54,6 +56,23 @@ class Registry(object):
 
 
 registry = Registry()
+
+
+class ThreadGate(object):
+    def __init__(self):
+        self.states = defaultdict(int)
+
+    def __enter__(self):
+        thread_id = threading.current_thread().ident
+        already_in_gate = thread_id in self.states
+        self.states[thread_id] += 1
+        return already_in_gate
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        thread_id = threading.current_thread().ident
+        self.states[thread_id] -= 1
+        if self.states[thread_id] == 0:
+            del self.states[thread_id]
 
 
 class ModelMeta(odm.ModelType):
@@ -186,29 +205,69 @@ class ModelMeta(odm.ModelType):
         if meta_through:
             for field_name in meta_through:
 
+                m2m_gate = ThreadGate()
+
                 # To obtain relation manager in stdnet, pass field_name through closure
-                def f(meta_through, field_name):
+                def f(m2m_gate, meta_through, field_name):
                     meta_rel_model = meta_through[field_name]
 
                     def m2m_changed_handle_from_django(instance, action, model, pk_set, **kwargs):
-                        source_instance = registry.get_stdnet_model(instance.__class__).objects.get(id=instance.pk)
-                        collection = getattr(source_instance, field_name)
-                        target_model = registry.get_stdnet_model(model)
-                        # Need measurement. get/set per each vs. bulk processing for KVS
-                        if action == 'post_add':
-                            for pk in pk_set:
-                                collection.add(target_model.objects.get(id=pk))
-                        elif action == 'pre_remove':
-                            for pk in pk_set:
-                                collection.remove(target_model.objects.get(id=pk))
+                        with m2m_gate as already_in_gate:
+                            if already_in_gate:
+                                return
 
-                    # XXX post_delete_handle_from_stdnet
-                    # XXX pre_save_from_stdnet
+                            source_instance = registry.get_stdnet_model(instance.__class__).objects.get(id=instance.pk)
+                            collection = getattr(source_instance, field_name)
+                            target_model = registry.get_stdnet_model(model)
+                            # Need measurement. get/set per each vs. bulk processing for KVS
+                            if action == 'post_add':
+                                for pk in pk_set:
+                                    collection.add(target_model.objects.get(id=pk))
+                            elif action == 'pre_remove':
+                                for pk in pk_set:
+                                    collection.remove(target_model.objects.get(id=pk))
+
                     # XXX multiple many-to-many relation with same models???
                     # XXX Is weak=False needed actually??
                     signals.m2m_changed.connect(m2m_changed_handle_from_django, sender=meta_rel_model, weak=False)
 
-                f(meta_through, field_name)
+                f(m2m_gate, meta_through, field_name)
+
+                def f2(m2m_gate, field_name):
+                    through_model = model._meta.related[field_name].model
+
+                    def post_commit_handle_from_stdnet(_ev, model, instances=(), **kwargs):
+                        with m2m_gate as already_in:
+                            if already_in:
+                                return
+
+                            source_field, target_field = model._meta.fields[-3:-1]
+                            for instance in instances:
+                                source_value = source_field.get_value(instance)
+                                target_value = target_field.get_value(instance)
+                                source_instance = registry.get_django_model(source_value.__class__).objects.get(id=source_value.id)
+                                collection = getattr(source_instance, field_name)
+                                target_instance = registry.get_django_model(target_value.__class__).objects.get(id=target_value.id)
+                                collection.add(target_instance)
+
+                    def pre_delete_handle_from_stdnet(_ev, model, instances=(), **kwargs):
+                        with m2m_gate as already_in_gate:
+                            if already_in_gate:
+                                return
+
+                            source_field, target_field = model._meta.fields[-3:-1]
+                            for instance in instances:
+                                source_value = source_field.get_value(instance)
+                                target_value = target_field.get_value(instance)
+                                source_instance = registry.get_django_model(source_value.__class__).objects.get(id=source_value.id)
+                                collection = getattr(source_instance, field_name)
+                                target_instance = registry.get_django_model(target_value.__class__).objects.get(id=target_value.id)
+                                collection.remove(target_instance)
+
+                    mapper.post_commit.bind(post_commit_handle_from_stdnet, sender=through_model)
+                    mapper.pre_delete.bind(pre_delete_handle_from_stdnet, sender=through_model)
+
+                f2(m2m_gate, field_name)
 
         return model
 
