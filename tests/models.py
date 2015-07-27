@@ -88,7 +88,6 @@ class ConnectionSettingTestCase(BaseTestCase):
             self.assertEqual(AModel.objects.backend.connection_string, backend_url)
             self.assertEqual(AModel.objects.read_backend.connection_string, read_backend_url)
 
-
     def test_vertical_sharding(self):
         from stdnet import odm
         from djangostdnet import models

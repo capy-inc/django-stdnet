@@ -143,8 +143,9 @@ class ModelMeta(odm.ModelType):
                                                                                              OneToOneField,
                                                                                              odm.ManyToManyField)):
                         odm_field = odm_field_or_callable
-                        rels = [meta for meta in mapper.registered_models
-                                if hasattr(meta.model, '_django_meta') and meta.model._django_meta.model == field.rel.to]
+                        rels = [registered_meta for registered_meta in mapper.registered_models
+                                if hasattr(registered_meta.model, '_django_meta') and
+                                registered_meta.model._django_meta.model == field.rel.to]
                         if len(rels) != 1:
                             raise ValueError("Can't make implicit model relation: %s", field.name)
                         model = rels[0].model
@@ -206,7 +207,7 @@ class ModelMeta(odm.ModelType):
                 manager = mapper[model]
                 manager.session().delete_from_django_object(manager, instance)
 
-            def post_delete_handle_from_stdnet(_ev, _model, instances=[], **kwargs):
+            def post_delete_handle_from_stdnet(_ev, _model, instances=(), **kwargs):
                 meta_model.objects.filter(pk__in=instances).delete()
 
             signals.post_save.connect(post_save_handle_from_django, sender=meta_model, weak=False)
@@ -256,11 +257,13 @@ class ModelMeta(odm.ModelType):
 
                             source_field, target_field = model._meta.fields[-3:-1]
                             for instance in instances:
-                                source_value = source_field.get_value(instance)
-                                target_value = target_field.get_value(instance)
-                                source_instance = registry.get_django_model(source_value.__class__).objects.get(id=source_value.id)
+                                source_obj = source_field.get_value(instance)
+                                target_obj = target_field.get_value(instance)
+                                source_instance = registry.get_django_model(source_obj.__class__)\
+                                    .objects.get(id=source_obj.id)
                                 collection = getattr(source_instance, field_name)
-                                target_instance = registry.get_django_model(target_value.__class__).objects.get(id=target_value.id)
+                                target_instance = registry.get_django_model(target_obj.__class__)\
+                                    .objects.get(id=target_obj.id)
                                 collection.add(target_instance)
 
                     def pre_delete_handle_from_stdnet(_ev, model, instances=(), **kwargs):
@@ -270,11 +273,13 @@ class ModelMeta(odm.ModelType):
 
                             source_field, target_field = model._meta.fields[-3:-1]
                             for instance in instances:
-                                source_value = source_field.get_value(instance)
-                                target_value = target_field.get_value(instance)
-                                source_instance = registry.get_django_model(source_value.__class__).objects.get(id=source_value.id)
+                                source_obj = source_field.get_value(instance)
+                                target_obj = target_field.get_value(instance)
+                                source_instance = registry.get_django_model(source_obj.__class__)\
+                                    .objects.get(id=source_obj.id)
                                 collection = getattr(source_instance, field_name)
-                                target_instance = registry.get_django_model(target_value.__class__).objects.get(id=target_value.id)
+                                target_instance = registry.get_django_model(target_obj.__class__)\
+                                    .objects.get(id=target_obj.id)
                                 collection.remove(target_instance)
 
                     mapper.post_commit.bind(post_commit_handle_from_stdnet, sender=through_model)

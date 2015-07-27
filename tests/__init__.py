@@ -45,7 +45,7 @@ def tearDownModule():
         redis_server.stop()
 
 
-from .models import *
-from .session import *
-from .fields import *
-from .ttl import *
+from .models import *  # noqa
+from .session import *  # noqa
+from .fields import *  # noqa
+from .ttl import *  # noqa

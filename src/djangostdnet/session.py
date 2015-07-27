@@ -17,10 +17,10 @@ class Session(session.Session):
             self._check_auto_now_and_auto_now_add(instance)
 
         created = False
-        if (modified
-            and isinstance(instance, Model)
-            and hasattr(instance, '_django_meta')
-            and hasattr(instance._django_meta, 'model')):
+        if modified \
+           and isinstance(instance, Model) \
+           and hasattr(instance, '_django_meta') \
+           and hasattr(instance._django_meta, 'model'):
             created = self._ensure_django_instance(instance)
         if created:
             return self.query(self.model(instance)).get(id=instance.id)
