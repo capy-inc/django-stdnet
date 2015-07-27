@@ -72,11 +72,6 @@ class BaseTestCase(TestCase):
         for statement in sql:
             cursor.execute(statement)
 
-    def register_manually(self, model):
-        from django.db.models import loading
-
-        loading.cache.register_model(self.app_label, model)
-
     def finish_defining_models(self):
         from django.db.models import loading
 
