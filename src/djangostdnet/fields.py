@@ -1,5 +1,7 @@
 from decimal import Decimal
 from django.db.models.fields import files
+from django.utils.encoding import smart_text
+from six import binary_type
 from stdnet import odm
 from stdnet.odm import related
 from stdnet.odm.globals import JSPLITTER
@@ -95,8 +97,8 @@ the database field for the ``PrivateKey`` model will have a ``public_key_id`` fi
         meta = self.relmodel._meta
         if not self.related_name:
             self.related_name = self.model.__name__.lower()
-        if (self.related_name not in meta.related and
-            self.related_name not in meta.dfields):
+        if self.related_name not in meta.related and \
+           self.related_name not in meta.dfields:
             self._register_with_related_model()
         else:
             raise odm.FieldError('Duplicated related name "{0} in model "{1}" '
@@ -243,6 +245,15 @@ class ImageField(odm.Field):
             value.save(value.name, value, save=False)
 
         return value.name
+
+    def to_python(self, value, backend=None):
+        if value is None:
+            return None
+
+        if isinstance(value, binary_type):
+            return smart_text(value)
+
+        return value
 
 
 class IPAddressField(odm.SymbolField):

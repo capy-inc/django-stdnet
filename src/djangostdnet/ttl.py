@@ -1,4 +1,5 @@
 from time import time
+from django.utils.encoding import smart_text
 from stdnet.odm import session
 from stdnet import odm
 
@@ -89,7 +90,11 @@ class TTLField(odm.CharField):
     def to_python(self, value, backend=None):
         if isinstance(value, int):
             return value
-        elif isinstance(value, basestring):
-            now = time()
-            t, delta = [int(v) for v in value.split(':')]
-            return t + delta - int(now)
+
+        if value is None:
+            return None
+
+        value = smart_text(value)
+        now = time()
+        t, delta = [int(v) for v in value.split(':')]
+        return t + delta - int(now)

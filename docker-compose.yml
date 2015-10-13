@@ -1,0 +1,8 @@
+tox:
+    build: .
+    volumes:
+        - ".:/src:ro"
+    links:
+        - redis
+redis:
+    image: redis

@@ -4,11 +4,9 @@ from .testcase import BaseTestCase
 
 class TTLTestCase(BaseTestCase):
     def test_it(self):
-        from stdnet import odm
         from djangostdnet import models, ttl as ttl_mod
 
         class AModel(models.Model):
-            name = odm.CharField()
             ttl = ttl_mod.TTLField()
 
             manager_class = ttl_mod.TTLManager
@@ -16,17 +14,24 @@ class TTLTestCase(BaseTestCase):
             class Meta:
                 register = False
 
-        # must not be raise ObjectDoesNotExist when ttl is positive
-        obj = AModel.objects.new(name='foo', ttl=10)
-        AModel.objects.get(id=obj.id)
+        obj = AModel.objects.new(ttl=None)
+        self.assertEqual(AModel.objects.get(id=obj.id).ttl, None,
+                         "Must not raise ObjectDoesNotExist if TTL is not set")
 
-        obj = AModel.objects.new(name='foo', ttl=-1)
-        with self.assertRaises(AModel.DoesNotExist):
+        obj = AModel.objects.new(ttl=10)
+        self.assertEqual(AModel.objects.get(id=obj.id).ttl, 10,
+                         "Must not raise ObjectDoesNotExist if TTL is effective")
+
+        obj = AModel.objects.new(ttl=-1)
+        with self.assertRaises(AModel.DoesNotExist,
+                               msg="Must raise ObjectDoesNotExist if TTL is expired"):
             AModel.objects.get(id=obj.id)
 
         with freeze_time('1970-01-01'):
-            obj = AModel.objects.new(name='foo', ttl=10)
-        with self.assertRaises(AModel.DoesNotExist):
+            obj = AModel.objects.new(ttl=10)
+        with self.assertRaises(AModel.DoesNotExist,
+                               msg="Even TTL value is positive, "
+                               "Must raise ObjectDoesNotExist if its expired"):
             AModel.objects.get(id=obj.id)
 
     def _make_simple_ttl_instances(self):

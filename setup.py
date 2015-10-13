@@ -12,6 +12,6 @@ setup(
     package_dir={
         '': 'src',
     },
-    install_requires=['python-stdnet'],
+    install_requires=['python-stdnet', 'Django'],
     tests_require=['mock', 'freezegun'],
 )

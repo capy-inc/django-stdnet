@@ -22,6 +22,7 @@ class OneToOneFieldTestCase(BaseTestCase):
                 django_model = ADjangoChildModel
                 register = False
 
+        self.finish_defining_models()
         self.create_table_for_model(ADjangoParentModel)
         self.create_table_for_model(ADjangoChildModel)
 
@@ -161,6 +162,7 @@ class OneToOneFieldTestCase(BaseTestCase):
                 django_model = ADjangoChildModel
                 register = False
 
+        self.finish_defining_models()
         self.create_table_for_model(ADjangoParentModel)
         self.create_table_for_model(ADjangoChildModel)
 
@@ -170,7 +172,7 @@ class OneToOneFieldTestCase(BaseTestCase):
         child_obj.delete()
         parent_obj = AParentModel.objects.get(id=parent_obj.id)
         with self.assertRaises(AChildModel.DoesNotExist):
-            _ = parent_obj.achildmodel
+            parent_obj.achildmodel
 
         self.assertEqual(len(ADjangoParentModel.objects.all()), 1)
         self.assertEqual(len(ADjangoChildModel.objects.all()), 0)
@@ -197,11 +199,12 @@ class OneToOneFieldTestCase(BaseTestCase):
                 django_model = ADjangoChildModel
                 register = False
 
+        self.finish_defining_models()
         self.create_table_for_model(ADjangoParentModel)
         self.create_table_for_model(ADjangoChildModel)
 
         parent_obj = AParentModel.objects.new(name='parent')
-        _ = AChildModel.objects.new(parent=parent_obj)
+        AChildModel.objects.new(parent=parent_obj)
 
         # cascading deletion
         parent_obj.delete()
@@ -231,6 +234,7 @@ class OneToOneFieldTestCase(BaseTestCase):
                 django_model = ADjangoChildModel
                 register = False
 
+        self.finish_defining_models()
         self.create_table_for_model(ADjangoParentModel)
         self.create_table_for_model(ADjangoChildModel)
 
@@ -240,7 +244,7 @@ class OneToOneFieldTestCase(BaseTestCase):
         child_dj_obj.delete()
         parent_dj_obj = ADjangoParentModel.objects.get(pk=parent_dj_obj.pk)
         with self.assertRaises(ADjangoChildModel.DoesNotExist):
-            _ = parent_dj_obj.adjangochildmodel
+            parent_dj_obj.adjangochildmodel
 
         self.assertEqual(len(ADjangoParentModel.objects.all()), 1)
         self.assertEqual(len(ADjangoChildModel.objects.all()), 0)
@@ -267,11 +271,12 @@ class OneToOneFieldTestCase(BaseTestCase):
                 django_model = ADjangoChildModel
                 register = False
 
+        self.finish_defining_models()
         self.create_table_for_model(ADjangoParentModel)
         self.create_table_for_model(ADjangoChildModel)
 
         parent_dj_obj = ADjangoParentModel.objects.create(name='parent')
-        _ = ADjangoChildModel.objects.create(parent=parent_dj_obj)
+        ADjangoChildModel.objects.create(parent=parent_dj_obj)
 
         # cascading deletion
         parent_dj_obj.delete()
